@@ -162,7 +162,10 @@ Your task: Using real-time web search, predict what is LIKELY TO HAPPEN on ${pre
 
 CONTEXT:
 - It is currently 5:00 AM Pacific Time on ${predictionDate}
-- You have access to the latest news, trends, and developments
+- You have access to the latest news, trends, and insights 
+- Don't make predictions on things that are scheduled or has obvious outcomes
+- Don't make predictions on things that are too far in the future
+- Always choose insightful and thought-provoking predictions
 - Focus on events expected to unfold during ${predictionDate}
 
 FORMAT RULES:
@@ -202,12 +205,10 @@ Be specific with times, numbers, and sources. Ground your predictions in current
         }
         break
       case 'gemini':
-        // Google search grounding via providerOptions
-        modelOptions = {
-          model: modelConfig.id,
-          providerOptions: {
-            google: { useSearchGrounding: true }
-          }
+        // Google Gemini with Google Search tool
+        modelOptions = { model: google('gemini-3-pro') }
+        tools = {
+          google_search: google.tools.googleSearch({}),
         }
         break
       case 'grok':
@@ -233,7 +234,7 @@ Be specific with times, numbers, and sources. Ground your predictions in current
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const generateOptions: any = {
-      model: modelConfig.id,
+      model: modelOptions.model || modelConfig.id,
       schema: predictionSchema,
       prompt,
       maxOutputTokens: 1000,
