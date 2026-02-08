@@ -647,97 +647,59 @@ function MobileTimeline({
   onDateIndexChange,
   onVisibleDateChange,
 }: MobileTimelineProps) {
-  const [touchStart, setTouchStart] = useState<{
-    x: number;
-    y: number;
-    time: number;
-  } | null>(null);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStart({
-      x: e.touches[0].clientX,
-      y: e.touches[0].clientY,
-      time: Date.now(),
-    });
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (!touchStart) return;
-
-    const touchEnd = {
-      x: e.changedTouches[0].clientX,
-      y: e.changedTouches[0].clientY,
-    };
-
-    const deltaX = touchStart.x - touchEnd.x;
-    const deltaY = touchStart.y - touchEnd.y;
-    const deltaTime = Date.now() - touchStart.time;
-    const velocityX = Math.abs(deltaX) / deltaTime;
-    const velocityY = Math.abs(deltaY) / deltaTime;
-
-    const minSwipeDistance = 50;
-    const minVelocity = 0.3;
-
-    // Determine if horizontal or vertical swipe
-    if (Math.abs(deltaX) > Math.abs(deltaY)) {
-      // Horizontal swipe - navigate models
-      if (Math.abs(deltaX) > minSwipeDistance && velocityX > minVelocity) {
-        if (deltaX > 0) {
-          // Swipe left - next model
-          setCurrentModelIndex(
-            (currentModelIndex + 1) % modelDisplayConfigs.length,
-          );
-        } else {
-          // Swipe right - previous model
-          setCurrentModelIndex(
-            currentModelIndex > 0
-              ? currentModelIndex - 1
-              : modelDisplayConfigs.length - 1,
-          );
-        }
-      }
-    } else {
-      // Vertical swipe - navigate dates
-      if (
-        Math.abs(deltaY) > minSwipeDistance &&
-        velocityY > minVelocity &&
-        availableDates.length > 1
-      ) {
-        let newIndex = selectedDateIndex;
-        if (deltaY > 0) {
-          // Swipe up - next date (older)
-          newIndex = Math.min(selectedDateIndex + 1, availableDates.length - 1);
-        } else {
-          // Swipe down - previous date (newer)
-          newIndex = Math.max(selectedDateIndex - 1, 0);
-        }
-
-        // Update date index
-        onDateIndexChange(newIndex);
-
-        // Notify calendar of visible date change
-        if (onVisibleDateChange && availableDates[newIndex]) {
-          const { day } = parseDateString(availableDates[newIndex]);
-          onVisibleDateChange(day);
-        }
-      }
-    }
-
-    setTouchStart(null);
-  };
-
   const config = modelDisplayConfigs[currentModelIndex];
   const currentDateStr =
     availableDates[selectedDateIndex] || getPredictionDate();
   const pred = getPredictionDataForDate(config.modelKey, currentDateStr);
   const isLoading = loading[currentDateStr];
 
+  // Velocity-based swipe handler for PredictionCard
+  const handleCardSwipe = (
+    direction: "left" | "right" | "up" | "down",
+    velocity: number,
+  ) => {
+    if (direction === "left" || direction === "right") {
+      // Horizontal swipe - navigate models
+      if (direction === "left") {
+        setCurrentModelIndex(
+          (currentModelIndex + 1) % modelDisplayConfigs.length,
+        );
+      } else {
+        setCurrentModelIndex(
+          currentModelIndex > 0
+            ? currentModelIndex - 1
+            : modelDisplayConfigs.length - 1,
+        );
+      }
+    } else if (availableDates.length > 1) {
+      // Vertical swipe - velocity-based date scrolling
+      // Higher velocity = more dates scrolled (1-5 based on velocity)
+      const scrollCount = Math.min(Math.max(Math.floor(velocity * 3), 1), 5);
+
+      let newIndex = selectedDateIndex;
+      if (direction === "up") {
+        // Swipe up - next dates (older)
+        newIndex = Math.min(
+          selectedDateIndex + scrollCount,
+          availableDates.length - 1,
+        );
+      } else {
+        // Swipe down - previous dates (newer)
+        newIndex = Math.max(selectedDateIndex - scrollCount, 0);
+      }
+
+      onDateIndexChange(newIndex);
+
+      // Notify calendar of visible date change
+      if (onVisibleDateChange && availableDates[newIndex]) {
+        const { day } = parseDateString(availableDates[newIndex]);
+        onVisibleDateChange(day);
+      }
+    }
+  };
+
   return (
-    <div
-      className="md:hidden px-3 py-4"
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
+    <div className="md:hidden px-3 py-4">
       <div className="flex items-center gap-1">
         <button
           onClick={() =>
@@ -766,6 +728,7 @@ function MobileTimeline({
             likesCount={pred?.likes_count || 0}
             date={formatDateDisplay(currentDateStr)}
             isLoading={isLoading || !pred}
+            onSwipe={handleCardSwipe}
           />
         </div>
 

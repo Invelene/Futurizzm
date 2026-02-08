@@ -23,6 +23,10 @@ export interface PredictionCardProps {
   date?: string;
   isSelected?: boolean;
   isLoading?: boolean;
+  onSwipe?: (
+    direction: "left" | "right" | "up" | "down",
+    velocity: number,
+  ) => void;
 }
 
 const modelIcons: Record<string, React.ReactNode> = {
@@ -43,12 +47,66 @@ export function PredictionCard({
   date = "jan 31",
   isSelected = false,
   isLoading = false,
+  onSwipe,
 }: PredictionCardProps) {
   const [liked, setLiked] = useState(false);
   const [displayLikes, setDisplayLikes] = useState(likesCount);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [copied, setCopied] = useState(false);
   const shareMenuRef = useRef<HTMLDivElement>(null);
+  const [touchStart, setTouchStart] = useState<{
+    x: number;
+    y: number;
+    time: number;
+  } | null>(null);
+
+  // Touch handlers for mobile velocity scrolling
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (onSwipe) {
+      setTouchStart({
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+        time: Date.now(),
+      });
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStart || !onSwipe) return;
+
+    const touchEnd = {
+      x: e.changedTouches[0].clientX,
+      y: e.changedTouches[0].clientY,
+    };
+
+    const deltaX = touchStart.x - touchEnd.x;
+    const deltaY = touchStart.y - touchEnd.y;
+    const deltaTime = Math.max(Date.now() - touchStart.time, 1);
+    const velocityX = Math.abs(deltaX) / deltaTime;
+    const velocityY = Math.abs(deltaY) / deltaTime;
+
+    const minSwipeDistance = 30;
+    const minVelocity = 0.2;
+
+    // Determine if horizontal or vertical swipe
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      // Horizontal swipe
+      if (Math.abs(deltaX) > minSwipeDistance && velocityX > minVelocity) {
+        e.preventDefault();
+        e.stopPropagation();
+        onSwipe(deltaX > 0 ? "left" : "right", velocityX);
+      }
+    } else {
+      // Vertical swipe
+      if (Math.abs(deltaY) > minSwipeDistance && velocityY > minVelocity) {
+        e.preventDefault();
+        e.stopPropagation();
+        onSwipe(deltaY > 0 ? "up" : "down", velocityY);
+      }
+    }
+
+    setTouchStart(null);
+  };
 
   // Check localStorage for like status
   useEffect(() => {
@@ -194,12 +252,13 @@ export function PredictionCard({
     <div
       className={cn(
         "futuristic-card bg-card/50 backdrop-blur-sm p-3 md:p-4 flex flex-col gap-3 md:gap-4 min-w-[260px] md:min-w-[280px] max-w-[300px] md:max-w-[320px] transition-all duration-300",
-        "hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] hover:border-white/40",
-        isSelected && "shadow-[0_0_15px_rgba(255,255,255,0.3)] border-white/80",
+        "md:hover:scale-[1.02] md:hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] md:hover:border-white/40",
+        isSelected &&
+          "md:shadow-[0_0_15px_rgba(255,255,255,0.3)] md:border-white/80",
       )}
-      style={
-        isSelected ? { borderColor: "rgba(255, 255, 255, 0.8)" } : undefined
-      }
+      style={isSelected ? { borderColor: undefined } : undefined}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
       <div className="corner-accent top-right" />
       <div className="corner-accent bottom-left" />

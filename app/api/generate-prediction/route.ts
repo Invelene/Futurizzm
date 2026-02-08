@@ -1,14 +1,13 @@
-import { generateObject } from "ai"
+import { generateText } from "ai"
 import { z } from "zod"
 import { supabase } from "@/lib/supabase"
 import { MODEL_CONFIG, type PredictionItem } from "@/lib/database.types"
 import { getTrendingCategories, type TrendingCategory } from "@/lib/trends"
 import { getPredictionDate } from "@/lib/time-utils"
-// Provider-specific imports for web search
+// Provider-specific imports for web search tools
 import { anthropic } from "@ai-sdk/anthropic"
 import { openai } from "@ai-sdk/openai"
 import { google } from "@ai-sdk/google"
-import { gateway } from "@ai-sdk/gateway"
 
 const predictionSchema = z.object({
   category: z.string().describe("1-2 word theme that captures the overall tone of all 3 predictions below (e.g., 'Tech Surge', 'Market Shift', 'Policy Storm', 'Breaking News')"),
@@ -253,37 +252,45 @@ async function generateForModel(
   // Get the current Pacific date for predictions
   const predictionDate = getPredictionDate()
 
-  const prompt = `You are Futurizzm, an AI prediction system with real-time web search access.
+  const prompt = `YOU ARE A JSON API. Output ONLY valid JSON. No explanations, no markdown, no prose.
+
+You are Futurizzm, an AI prediction system with real-time web search access.
 
 Date: ${predictionDate}
 Category: ${category}
-Topics to predict on:
-${topicsList}
+Topics: ${topicsList}
 
-Your task: Using real-time web search, predict what is LIKELY TO HAPPEN on ${predictionDate} for each topic.
+Task: Use web search to predict what is LIKELY TO HAPPEN on ${predictionDate} for each topic.
 
-CONTEXT:
+RULES:
 - It is currently 5:00 AM Pacific Time on ${predictionDate}
-- You have access to the latest news, trends, and insights 
-- Don't make predictions on things that are scheduled or has obvious outcomes
-- Don't make predictions on things that are too far in the future
-- Always choose insightful and thought-provoking predictions
-- Focus on events expected to unfold during ${predictionDate}
+- Don't predict scheduled events or obvious outcomes
+- Be insightful and thought-provoking
+- Focus on events expected today
 
-FORMAT RULES:
-- Title: 3-4 words only, headline style (e.g., "Market Rally Expected")
-- Chance: 0-100 percentage likelihood
-- Content: 25-30 words total
-  - First sentence: What will happen
-  - Next 1-2 sentences: Overlooked signals/reasons the general public might miss
+PREDICTION FORMAT:
+- Title: 3-4 words headline style
+- Chance: 0-100 percentage
+- Content: 25-30 words (what will happen + overlooked signals)
 
-Be specific with times, numbers, and sources. Ground your predictions in current events.`
+OUTPUT: Respond with ONLY this JSON structure, nothing else:
+{
+  "category": "1-2 word theme (e.g., 'Tech Surge', 'Policy Storm')",
+  "predictions": [
+    {"title": "3-4 word headline", "chance": 75, "content": "25-30 words..."},
+    {"title": "3-4 word headline", "chance": 60, "content": "25-30 words..."},
+    {"title": "3-4 word headline", "chance": 45, "content": "25-30 words..."}
+  ]
+}
+
+CRITICAL: Do NOT write any text before or after the JSON. No "Based on my research..." No explanations. ONLY the JSON object.`
 
   try {
     // Configure provider-specific web search tools
     let modelOptions: Record<string, unknown> = { model: modelConfig.id }
     let tools: Record<string, unknown> = {}
 
+    // Configure web search tools based on model
     switch (modelKey) {
       case 'claude':
         // Anthropic web search tool
@@ -307,12 +314,13 @@ Be specific with times, numbers, and sources. Ground your predictions in current
         }
         break
       case 'gemini':
-        // Google Gemini 3 Flash Preview using @ai-sdk/google directly
-        // Requires GOOGLE_GENERATIVE_AI_API_KEY environment variable
-        modelOptions = { model: google('gemini-3-flash-preview') }
+        // Google Search grounding for Gemini
+        tools = {
+          google_search: google.tools.googleSearch({}),
+        }
         break
       case 'grok':
-        // xAI Grok - uses searchParameters in providerOptions
+        // xAI Grok - uses searchParameters in providerOptions (built-in search)
         modelOptions = {
           model: modelConfig.id,
           providerOptions: {
@@ -335,9 +343,8 @@ Be specific with times, numbers, and sources. Ground your predictions in current
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const generateOptions: any = {
       model: modelOptions.model || modelConfig.id,
-      schema: predictionSchema,
       prompt,
-      maxOutputTokens: 1000,
+      maxTokens: 1500,
     }
 
     if (providerOpts) {
@@ -346,21 +353,37 @@ Be specific with times, numbers, and sources. Ground your predictions in current
 
     if (Object.keys(tools).length > 0) {
       generateOptions.tools = tools
+      generateOptions.maxSteps = 5 // Allow tool execution before final response
     }
 
-    const { object } = await generateObject(generateOptions)
+    const { text } = await generateText(generateOptions)
 
-    // Cast to expected type - now includes AI-generated category
-    const result = object as { 
-      category: string;
-      predictions: Array<{ title: string; chance: number; content: string }> 
+    if (!text || text.trim().length === 0) {
+      throw new Error(`Model returned empty text. Check that web search tools are configured correctly.`)
     }
+
+    // Parse JSON from text response, handling potential markdown code blocks
+    let jsonText = text.trim()
+    // Remove markdown code blocks if present
+    if (jsonText.startsWith('```json')) {
+      jsonText = jsonText.slice(7)
+    } else if (jsonText.startsWith('```')) {
+      jsonText = jsonText.slice(3)
+    }
+    if (jsonText.endsWith('```')) {
+      jsonText = jsonText.slice(0, -3)
+    }
+    jsonText = jsonText.trim()
+
+    // Parse and validate with Zod schema
+    const parsed = JSON.parse(jsonText)
+    const validatedResult = predictionSchema.parse(parsed)
 
     // Use the AI-generated category that reflects the tone of all predictions
-    const aiGeneratedCategory = result.category || category
+    const aiGeneratedCategory = validatedResult.category || category
 
     // Add color based on chance percentage
-    const predictionsWithColor: PredictionItem[] = result.predictions.map((p) => ({
+    const predictionsWithColor: PredictionItem[] = validatedResult.predictions.map((p) => ({
       title: p.title,
       chance: p.chance,
       chanceColor: p.chance >= 50 ? '#22c55e' : '#ef4444',
