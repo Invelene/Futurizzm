@@ -648,104 +648,221 @@ function MobileTimeline({
   onVisibleDateChange,
 }: MobileTimelineProps) {
   const config = modelDisplayConfigs[currentModelIndex];
-  const currentDateStr =
-    availableDates[selectedDateIndex] || getPredictionDate();
-  const pred = getPredictionDataForDate(config.modelKey, currentDateStr);
-  const isLoading = loading[currentDateStr];
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isScrolling, setIsScrolling] = useState(false);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Velocity-based swipe handler for PredictionCard
-  const handleCardSwipe = (
-    direction: "left" | "right" | "up" | "down",
-    velocity: number,
-  ) => {
-    if (direction === "left" || direction === "right") {
-      // Horizontal swipe - navigate models
-      if (direction === "left") {
+  // Touch tracking for horizontal swipe detection
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(
+    null,
+  );
+  const isHorizontalSwipe = useRef(false);
+
+  // Flag to prevent scroll handler from updating date during programmatic scroll
+  const isScrollingToDateRef = useRef(false);
+
+  // Scroll to selected date when it changes (from calendar click)
+  useEffect(() => {
+    if (!scrollContainerRef.current || availableDates.length === 0) return;
+
+    const container = scrollContainerRef.current;
+    const targetCard = container.querySelector(
+      `[data-date-index="${selectedDateIndex}"]`,
+    ) as HTMLElement;
+
+    if (targetCard) {
+      isScrollingToDateRef.current = true;
+      targetCard.scrollIntoView({ behavior: "smooth", block: "start" });
+
+      // Reset flag after scroll completes
+      setTimeout(() => {
+        isScrollingToDateRef.current = false;
+      }, 500);
+    }
+  }, [selectedDateIndex, availableDates.length]);
+
+  // Handle scroll end detection for hover effect
+  const handleScrollEnd = useCallback(() => {
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+    }
+    scrollTimeoutRef.current = setTimeout(() => {
+      setIsScrolling(false);
+    }, 150);
+  }, []);
+
+  // Track scroll to update visible date and hover effect
+  const handleScroll = useCallback(() => {
+    setIsScrolling(true);
+    handleScrollEnd();
+
+    // Skip date detection during programmatic scroll
+    if (isScrollingToDateRef.current) return;
+
+    if (!scrollContainerRef.current) return;
+
+    // Find which card is most visible (at 1/3 from top)
+    const container = scrollContainerRef.current;
+    const containerRect = container.getBoundingClientRect();
+    const checkY = containerRect.top + containerRect.height * 0.33;
+
+    const cards = container.querySelectorAll("[data-date-index]");
+    for (let i = 0; i < cards.length; i++) {
+      const card = cards[i] as HTMLElement;
+      const rect = card.getBoundingClientRect();
+      if (rect.top <= checkY && rect.bottom > checkY) {
+        const dateIndex = parseInt(card.getAttribute("data-date-index") || "0");
+        if (dateIndex !== selectedDateIndex) {
+          onDateIndexChange(dateIndex);
+          if (onVisibleDateChange && availableDates[dateIndex]) {
+            const { day } = parseDateString(availableDates[dateIndex]);
+            onVisibleDateChange(day);
+          }
+        }
+        break;
+      }
+    }
+  }, [
+    selectedDateIndex,
+    onDateIndexChange,
+    onVisibleDateChange,
+    availableDates,
+    handleScrollEnd,
+  ]);
+
+  // Horizontal swipe detection for model switching
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+      time: Date.now(),
+    };
+    isHorizontalSwipe.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+
+    const deltaX = Math.abs(e.touches[0].clientX - touchStartRef.current.x);
+    const deltaY = Math.abs(e.touches[0].clientY - touchStartRef.current.y);
+
+    // Detect if this is a horizontal swipe (for model switching)
+    if (deltaX > deltaY * 1.5 && deltaX > 20) {
+      isHorizontalSwipe.current = true;
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+
+    const deltaX = e.changedTouches[0].clientX - touchStartRef.current.x;
+    const deltaTime = Date.now() - touchStartRef.current.time;
+    const velocity = Math.abs(deltaX) / deltaTime;
+
+    // Only switch models on clear horizontal swipe
+    if (isHorizontalSwipe.current && Math.abs(deltaX) > 50 && velocity > 0.3) {
+      if (deltaX < 0) {
+        // Swipe left - next model
         setCurrentModelIndex(
           (currentModelIndex + 1) % modelDisplayConfigs.length,
         );
       } else {
+        // Swipe right - previous model
         setCurrentModelIndex(
           currentModelIndex > 0
             ? currentModelIndex - 1
             : modelDisplayConfigs.length - 1,
         );
       }
-    } else if (availableDates.length > 1) {
-      // Vertical swipe - velocity-based date scrolling
-      // Higher velocity = more dates scrolled (1-5 based on velocity)
-      const scrollCount = Math.min(Math.max(Math.floor(velocity * 3), 1), 5);
-
-      let newIndex = selectedDateIndex;
-      if (direction === "up") {
-        // Swipe up - next dates (older)
-        newIndex = Math.min(
-          selectedDateIndex + scrollCount,
-          availableDates.length - 1,
-        );
-      } else {
-        // Swipe down - previous dates (newer)
-        newIndex = Math.max(selectedDateIndex - scrollCount, 0);
-      }
-
-      onDateIndexChange(newIndex);
-
-      // Notify calendar of visible date change
-      if (onVisibleDateChange && availableDates[newIndex]) {
-        const { day } = parseDateString(availableDates[newIndex]);
-        onVisibleDateChange(day);
-      }
     }
+
+    touchStartRef.current = null;
   };
 
   return (
-    <div className="md:hidden px-3 py-4">
-      <div className="flex items-center gap-1">
-        <button
-          onClick={() =>
-            setCurrentModelIndex(
-              currentModelIndex > 0
-                ? currentModelIndex - 1
-                : modelDisplayConfigs.length - 1,
-            )
+    <div className="md:hidden relative">
+      {/* Scroll container with hover effect */}
+      <div
+        ref={scrollContainerRef}
+        className={`h-[70vh] overflow-y-auto overflow-x-hidden px-3 py-4 transition-all duration-150 ${
+          isScrolling ? "ring-1 ring-foreground/20 ring-inset" : ""
+        }`}
+        style={{
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+          WebkitOverflowScrolling: "touch",
+        }}
+        onScroll={handleScroll}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Hide webkit scrollbar */}
+        <style jsx>{`
+          div::-webkit-scrollbar {
+            display: none;
           }
-          className="p-1.5 text-muted-foreground hover:text-foreground transition-colors shrink-0"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
+        `}</style>
 
-        <div className="flex-1 flex justify-center">
-          <PredictionCard
-            id={pred?.id}
-            category={pred?.category || "Loading..."}
-            categoryColor={getCategoryColor(
-              pred?.category || "",
-              currentModelIndex,
-            )}
-            model={config.model}
-            modelVersion={config.modelVersion}
-            predictions={pred?.predictions || []}
-            likesCount={pred?.likes_count || 0}
-            date={formatDateDisplay(currentDateStr)}
-            isLoading={isLoading || !pred}
-            onSwipe={handleCardSwipe}
-          />
+        {/* Vertical feed of prediction cards */}
+        <div className="flex flex-col gap-4">
+          {availableDates.map((dateStr, dateIndex) => {
+            const pred = getPredictionDataForDate(config.modelKey, dateStr);
+            const isLoading = loading[dateStr];
+
+            return (
+              <div
+                key={`${dateStr}-${config.modelKey}`}
+                data-date-index={dateIndex}
+                className="flex justify-center"
+              >
+                <PredictionCard
+                  id={pred?.id}
+                  category={pred?.category || "Loading..."}
+                  categoryColor={getCategoryColor(
+                    pred?.category || "",
+                    currentModelIndex,
+                  )}
+                  model={config.model}
+                  modelVersion={config.modelVersion}
+                  predictions={pred?.predictions || []}
+                  likesCount={pred?.likes_count || 0}
+                  date={formatDateDisplay(dateStr)}
+                  isLoading={isLoading || !pred}
+                />
+              </div>
+            );
+          })}
         </div>
-
-        <button
-          onClick={() =>
-            setCurrentModelIndex(
-              (currentModelIndex + 1) % modelDisplayConfigs.length,
-            )
-          }
-          className="p-1.5 text-muted-foreground hover:text-foreground transition-colors shrink-0"
-        >
-          <ChevronRight className="w-5 h-5" />
-        </button>
       </div>
 
+      {/* Model navigation arrows - fixed at sides */}
+      <button
+        onClick={() =>
+          setCurrentModelIndex(
+            currentModelIndex > 0
+              ? currentModelIndex - 1
+              : modelDisplayConfigs.length - 1,
+          )
+        }
+        className="absolute left-1 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground hover:text-foreground transition-colors bg-background/80 rounded-full z-10"
+      >
+        <ChevronLeft className="w-5 h-5" />
+      </button>
+
+      <button
+        onClick={() =>
+          setCurrentModelIndex(
+            (currentModelIndex + 1) % modelDisplayConfigs.length,
+          )
+        }
+        className="absolute right-1 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground hover:text-foreground transition-colors bg-background/80 rounded-full z-10"
+      >
+        <ChevronRight className="w-5 h-5" />
+      </button>
+
       {/* Model navigation dots */}
-      <div className="flex justify-center gap-2 mt-3">
+      <div className="flex justify-center gap-2 py-3">
         {modelDisplayConfigs.map((_, index) => (
           <button
             key={index}

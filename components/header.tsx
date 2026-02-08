@@ -1,7 +1,7 @@
 "use client";
 
 import { Brain, Menu } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getTimeUntilReset } from "@/lib/time-utils";
 
 export function Header() {
@@ -12,6 +12,9 @@ export function Header() {
     minutes: 0,
     seconds: 0,
   });
+
+  const menuRef = useRef<HTMLDivElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   // Avoid hydration mismatch
   useEffect(() => {
@@ -24,6 +27,30 @@ export function Header() {
 
     return () => clearInterval(timer);
   }, []);
+
+  // Close menu on outside click/touch
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    function handleOutsideClick(event: MouseEvent | TouchEvent) {
+      const target = event.target as Node;
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(target) &&
+        menuButtonRef.current &&
+        !menuButtonRef.current.contains(target)
+      ) {
+        setMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("touchstart", handleOutsideClick);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("touchstart", handleOutsideClick);
+    };
+  }, [menuOpen]);
 
   const formatTime = (num: number) => num.toString().padStart(2, "0");
 
@@ -53,7 +80,11 @@ export function Header() {
         </button>
       </nav>
 
-      <button className="md:hidden p-2" onClick={() => setMenuOpen(!menuOpen)}>
+      <button
+        ref={menuButtonRef}
+        className="md:hidden p-2"
+        onClick={() => setMenuOpen(!menuOpen)}
+      >
         <Menu className="w-5 h-5" />
       </button>
 
@@ -73,7 +104,10 @@ export function Header() {
       </div>
 
       {menuOpen && (
-        <div className="absolute top-14 left-0 right-0 bg-background border-b border-border/30 md:hidden z-50">
+        <div
+          ref={menuRef}
+          className="absolute top-14 left-0 right-0 bg-background border-b border-border/30 md:hidden z-50"
+        >
           <nav className="flex flex-col items-center p-4 gap-3">
             <button className="text-muted-foreground hover:text-foreground transition-colors font-mono text-sm py-2">
               Live
