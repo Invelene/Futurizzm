@@ -27,10 +27,10 @@ export interface PredictionInsert {
 
 // Model configuration
 export const MODEL_CONFIG = {
-    grok: { id: 'xai/grok-4', label: 'GROK', version: '4' },
+    grok: { id: 'xai/grok-4.1-fast-reasoning', label: 'GROK', version: '4.1' },
     claude: { id: 'anthropic/claude-sonnet-4.5', label: 'CLAUDE', version: '4.5' },
-    gpt: { id: 'openai/gpt-5.2', label: 'GPT', version: '5' },
-    gemini: { id: 'google/gemini-3-pro', label: 'GEMINI', version: '3' },
+    gpt: { id: 'openai/gpt-5.2', label: 'GPT', version: '5.2' },
+    gemini: { id: 'google/gemini-3-flash', label: 'GEMINI', version: '3' },
 } as const;
 
 export type ModelKey = keyof typeof MODEL_CONFIG;

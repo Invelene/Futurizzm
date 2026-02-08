@@ -1,45 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
-
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
-.dark {
+  /* Dark Theme - Default and Only Theme */
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.145 0 0);
@@ -72,10 +35,10 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.269 0 0);
   --sidebar-ring: oklch(0.439 0 0);
+  --radius: 0.625rem;
 }
 
 @theme inline {
-  /* optional: --font-sans, --font-serif, --font-mono if they are applied in the layout.tsx */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -145,18 +108,13 @@
 
 .futuristic-card {
   position: relative;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(255, 255, 255, 0.01) 100%
+  );
   border: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-:root .futuristic-card {
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.03) 0%, rgba(0, 0, 0, 0.01) 100%);
-  border: 1px solid rgba(0, 0, 0, 0.15);
-}
-
-.dark .futuristic-card {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .futuristic-card::before,
@@ -165,12 +123,7 @@
   position: absolute;
   width: 20px;
   height: 20px;
-  border: 2px solid rgba(0, 0, 0, 0.2);
-}
-
-.dark .futuristic-card::before,
-.dark .futuristic-card::after {
-  border-color: rgba(255, 255, 255, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.4);
 }
 
 .futuristic-card::before {
@@ -196,11 +149,6 @@
 .corner-accent.top-right {
   top: 4px;
   right: 4px;
-  border-top: 2px solid rgba(0, 0, 0, 0.2);
-  border-right: 2px solid rgba(0, 0, 0, 0.2);
-}
-
-.dark .corner-accent.top-right {
   border-top: 2px solid rgba(255, 255, 255, 0.3);
   border-right: 2px solid rgba(255, 255, 255, 0.3);
 }
@@ -208,11 +156,6 @@
 .corner-accent.bottom-left {
   bottom: 4px;
   left: 4px;
-  border-bottom: 2px solid rgba(0, 0, 0, 0.2);
-  border-left: 2px solid rgba(0, 0, 0, 0.2);
-}
-
-.dark .corner-accent.bottom-left {
   border-bottom: 2px solid rgba(255, 255, 255, 0.3);
   border-left: 2px solid rgba(255, 255, 255, 0.3);
 }

@@ -8,8 +8,10 @@ import { getPredictionDate } from "@/lib/time-utils"
 import { anthropic } from "@ai-sdk/anthropic"
 import { openai } from "@ai-sdk/openai"
 import { google } from "@ai-sdk/google"
+import { gateway } from "@ai-sdk/gateway"
 
 const predictionSchema = z.object({
+  category: z.string().describe("1-2 word theme that captures the overall tone of all 3 predictions below (e.g., 'Tech Surge', 'Market Shift', 'Policy Storm', 'Breaking News')"),
   predictions: z
     .array(
       z.object({
@@ -84,6 +86,88 @@ function getRandomFallbacks(): TrendingCategory[] {
   return shuffleArray(FALLBACK_CATEGORIES).slice(0, 4)
 }
 
+// Model keys for iteration
+const MODEL_KEYS = ['grok', 'claude', 'gpt', 'gemini'] as const
+type ModelKey = typeof MODEL_KEYS[number]
+
+// Verify predictions exist in database for today and retry missing models
+async function verifyAndRetryPredictions(
+  predictionDate: string,
+  categories: TrendingCategory[],
+  maxRetries: number = 3
+): Promise<{ verified: ModelKey[], retried: ModelKey[], failed: ModelKey[] }> {
+  const verified: ModelKey[] = []
+  const retried: ModelKey[] = []
+  const failed: ModelKey[] = []
+  
+  if (!supabase) {
+    console.error('Supabase not configured, skipping verification')
+    return { verified: MODEL_KEYS.slice() as unknown as ModelKey[], retried, failed }
+  }
+  
+  // Check which models have predictions for today
+  const { data: existingPredictions, error } = await supabase
+    .from('predictions')
+    .select('model')
+    .eq('date', predictionDate)
+  
+  if (error) {
+    console.error('Error fetching predictions for verification:', error)
+    return { verified: [], retried: [], failed: MODEL_KEYS.slice() as unknown as ModelKey[] }
+  }
+  
+  const existingModels = new Set(existingPredictions?.map(p => p.model) || [])
+  const missingModels = MODEL_KEYS.filter(model => !existingModels.has(model))
+  
+  // Mark existing ones as verified
+  MODEL_KEYS.forEach(model => {
+    if (existingModels.has(model)) {
+      verified.push(model)
+    }
+  })
+  
+  console.log(`Verification: ${verified.length}/4 models have predictions. Missing: ${missingModels.join(', ') || 'none'}`)
+  
+  // Retry missing models
+  for (const modelKey of missingModels) {
+    let success = false
+    const modelIndex = MODEL_KEYS.indexOf(modelKey)
+    const category = categories[modelIndex] || getRandomFallbacks()[0]
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      console.log(`Retry attempt ${attempt}/${maxRetries} for ${modelKey}...`)
+      
+      try {
+        const response = await generateForModel(modelKey, category.name, category.topics)
+        const data = await response.json()
+        
+        if (!data.error && data.predictions && data.predictions.length > 0) {
+          console.log(`✓ ${modelKey} succeeded on attempt ${attempt}`)
+          retried.push(modelKey)
+          success = true
+          break
+        } else {
+          console.error(`× ${modelKey} returned invalid data on attempt ${attempt}:`, data.error || 'No predictions')
+        }
+      } catch (err) {
+        console.error(`× ${modelKey} failed on attempt ${attempt}:`, err)
+      }
+      
+      // Wait before retry (exponential backoff)
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)))
+      }
+    }
+    
+    if (!success) {
+      console.error(`✗ ${modelKey} failed all ${maxRetries} retry attempts`)
+      failed.push(modelKey)
+    }
+  }
+  
+  return { verified, retried, failed }
+}
+
 // POST: Generate for specific model (used by frontend)
 // GET: Generate all predictions (used by cron)
 export async function POST(req: Request) {
@@ -101,6 +185,10 @@ export async function GET(req: Request) {
   //   return Response.json({ error: 'Unauthorized' }, { status: 401 })
   // }
 
+  // Get the prediction date (tomorrow in EST)
+  const predictionDate = getPredictionDate()
+  console.log(`Generating predictions for date: ${predictionDate}`)
+
   // Fetch trending categories from Google Trends
   let categories: TrendingCategory[]
   let usingFallback = false
@@ -113,11 +201,11 @@ export async function GET(req: Request) {
     usingFallback = true
   }
 
-  const modelKeys = ['grok', 'claude', 'gpt', 'gemini'] as const
-  const results = []
+  const results: { model: string, category: string, status: string, data?: unknown, error?: string }[] = []
 
+  // Initial generation for all models
   for (let i = 0; i < 4; i++) {
-    const modelKey = modelKeys[i]
+    const modelKey = MODEL_KEYS[i]
     const category = categories[i] || getRandomFallbacks()[0]
 
     try {
@@ -129,10 +217,24 @@ export async function GET(req: Request) {
     }
   }
 
+  // Verify all models have predictions and retry any that failed
+  console.log('Starting verification phase...')
+  const verification = await verifyAndRetryPredictions(predictionDate, categories, 3)
+  
+  const successCount = verification.verified.length + verification.retried.length
+  const allSucceeded = successCount === 4
+
   return Response.json({
-    date: new Date().toISOString().split('T')[0],
+    date: predictionDate,
     trendSource: usingFallback ? 'fallback' : 'google-trends',
-    results
+    results,
+    verification: {
+      verified: verification.verified,
+      retried: verification.retried,
+      failed: verification.failed,
+      allModelsSucceeded: allSucceeded,
+      summary: `${successCount}/4 models have predictions`
+    }
   })
 }
 
@@ -205,11 +307,9 @@ Be specific with times, numbers, and sources. Ground your predictions in current
         }
         break
       case 'gemini':
-        // Google Gemini with Google Search tool
-        modelOptions = { model: google('gemini-3-pro') }
-        tools = {
-          google_search: google.tools.googleSearch({}),
-        }
+        // Google Gemini 3 Flash Preview using @ai-sdk/google directly
+        // Requires GOOGLE_GENERATIVE_AI_API_KEY environment variable
+        modelOptions = { model: google('gemini-3-flash-preview') }
         break
       case 'grok':
         // xAI Grok - uses searchParameters in providerOptions
@@ -250,8 +350,14 @@ Be specific with times, numbers, and sources. Ground your predictions in current
 
     const { object } = await generateObject(generateOptions)
 
-    // Cast to expected type
-    const result = object as { predictions: Array<{ title: string; chance: number; content: string }> }
+    // Cast to expected type - now includes AI-generated category
+    const result = object as { 
+      category: string;
+      predictions: Array<{ title: string; chance: number; content: string }> 
+    }
+
+    // Use the AI-generated category that reflects the tone of all predictions
+    const aiGeneratedCategory = result.category || category
 
     // Add color based on chance percentage
     const predictionsWithColor: PredictionItem[] = result.predictions.map((p) => ({
@@ -266,7 +372,7 @@ Be specific with times, numbers, and sources. Ground your predictions in current
       const { error: dbError } = await supabase.from('predictions').upsert({
         date: predictionDate,
         model: modelKey,
-        category: category,
+        category: aiGeneratedCategory, // Use AI-generated category
         predictions: predictionsWithColor,
       }, {
         onConflict: 'date,model,category',
@@ -277,9 +383,11 @@ Be specific with times, numbers, and sources. Ground your predictions in current
       }
     }
 
-    return Response.json({ predictions: predictionsWithColor })
+    return Response.json({ predictions: predictionsWithColor, category: aiGeneratedCategory })
   } catch (error) {
-    console.error("Error generating prediction:", error)
-    return Response.json({ error: "Failed to generate prediction" }, { status: 500 })
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    const errorName = error instanceof Error ? error.name : 'Unknown'
+    console.error("Error generating prediction:", { name: errorName, message: errorMessage, error })
+    return Response.json({ error: "Failed to generate prediction", details: errorMessage }, { status: 500 })
   }
 }
