@@ -264,18 +264,28 @@ Task: Use web search to predict what is LIKELY TO HAPPEN on ${predictionDate} fo
 
 RULES:
 - It is currently 5:00 AM Pacific Time on ${predictionDate}
+- First sentence will be the prediction (use the word "will" when necessary), second or third sentences will be the reasons the prediction is likely to happen
 - Don't predict scheduled events or obvious outcomes
-- Be insightful and thought-provoking
-- Focus on events expected today
+- Don't predict events that are too far in the future
+- When working on predictions, pick up on signals or overlooked reasons that could lead to unexpected outcomes or events
+- Be insightful and initiative
+- Try to become good at predicting the future
+- Be exact, Call names of persons, events, things, activities, or places
+- Prioritize insightful details
+- You are allowed to use web search to find information to help make predictions
+- Don't repeat the words "overlooked signals" or other words in these rules in your responses
+- Trending topics are information clues for you to tactically deduce nuances for predictions that are not obvious or predictable
+- Lastly, ground your predictions in reality and avoid making outlandish claims
+- All predictions must be for the date ${predictionDate}
 
 PREDICTION FORMAT:
 - Title: 3-4 words headline style
 - Chance: 0-100 percentage
-- Content: 25-30 words (what will happen + overlooked signals)
+- Content: 25-30 words (Adhere strictly to the rules given above)
 
 OUTPUT: Respond with ONLY this JSON structure, nothing else:
 {
-  "category": "1-2 word theme (e.g., 'Tech Surge', 'Policy Storm')",
+  "category": "1-2 word theme (e.g., 'Tech Surge', 'Policy Storm'), capture the",
   "predictions": [
     {"title": "3-4 word headline", "chance": 75, "content": "25-30 words..."},
     {"title": "3-4 word headline", "chance": 60, "content": "25-30 words..."},
@@ -344,6 +354,7 @@ CRITICAL: Do NOT write any text before or after the JSON. No "Based on my resear
     const generateOptions: any = {
       model: modelOptions.model || modelConfig.id,
       prompt,
+      system: "You are a strict JSON generator. You MUST return exactly 3 items in the 'predictions' array. No more, no less.",
       maxTokens: 1500,
     }
 

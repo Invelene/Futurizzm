@@ -1,6 +1,7 @@
 "use client";
 
-import { Brain, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
+import Image from "next/image";
 import { useState, useEffect, useRef } from "react";
 import { getTimeUntilReset } from "@/lib/time-utils";
 
@@ -55,18 +56,23 @@ export function Header() {
   const formatTime = (num: number) => num.toString().padStart(2, "0");
 
   return (
-    <header className="w-full px-4 md:px-6 py-4 flex items-center justify-between border-b border-border/30">
+    <header className="relative w-full px-4 md:px-6 py-4 flex items-center justify-between border-b border-border/30">
       <div className="flex items-center gap-3">
-        <div className="relative">
-          <Brain className="w-6 h-6 md:w-8 md:h-8 text-foreground" />
-          <div className="absolute -top-1 -right-1 w-2 h-2 bg-accent rounded-full" />
+        <div className="relative w-10 h-10 md:w-12 md:h-12 animate-logo">
+          <Image
+            src="/prediction.svg"
+            alt="Futurizzm Logo"
+            fill
+            className="object-contain"
+            priority
+          />
         </div>
-        <span className="hidden md:inline text-lg md:text-xl font-semibold tracking-wider font-mono">
+        <span className="hidden md:inline text-xl md:text-2xl font-bold tracking-tight text-white font-mono">
           Futurizzm
         </span>
       </div>
 
-      <nav className="hidden md:flex items-center gap-6">
+      <nav className="hidden md:flex items-center gap-6 absolute left-1/2 -translate-x-1/2">
         <button className="text-muted-foreground hover:text-foreground transition-colors font-mono text-sm">
           Live
         </button>

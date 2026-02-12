@@ -2,6 +2,7 @@
 
 import type React from "react";
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { Heart, Share2, Copy, X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,10 +31,26 @@ export interface PredictionCardProps {
 }
 
 const modelIcons: Record<string, React.ReactNode> = {
-  GROK: <span className="text-xs">𝕏</span>,
-  CLAUDE: <span className="text-xs font-bold">C</span>,
-  GPT: <span className="text-xs">◯</span>,
-  GEMINI: <span className="text-xs">✦</span>,
+  GROK: (
+    <div className="relative w-full h-full">
+      <Image src="/Grok.svg" alt="Grok" fill className="object-contain" />
+    </div>
+  ),
+  CLAUDE: (
+    <div className="relative w-full h-full">
+      <Image src="/Claude.svg" alt="Claude" fill className="object-contain" />
+    </div>
+  ),
+  GPT: (
+    <div className="relative w-full h-full">
+      <Image src="/ChatGPT.svg" alt="GPT" fill className="object-contain" />
+    </div>
+  ),
+  GEMINI: (
+    <div className="relative w-full h-full">
+      <Image src="/Gemini.svg" alt="Gemini" fill className="object-contain" />
+    </div>
+  ),
 };
 
 export function PredictionCard({
@@ -285,10 +302,7 @@ export function PredictionCard({
 
       {/* Model info */}
       <div className="flex items-center gap-2">
-        <div
-          className="w-4 h-4 md:w-5 md:h-5 rounded flex items-center justify-center"
-          style={{ backgroundColor: categoryColor }}
-        >
+        <div className="w-6 h-6 md:w-7 md:h-7 rounded flex items-center justify-center overflow-hidden">
           {modelIcons[model]}
         </div>
         <span className="font-mono text-xs md:text-sm font-semibold">

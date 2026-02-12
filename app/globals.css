@@ -186,3 +186,13 @@
 .pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;
 }
+@keyframes float-glow {
+  0% { transform: translateY(0px) scale(1); filter: drop-shadow(0 0 2px rgba(56, 189, 248, 0.3)); }
+  50% { transform: translateY(-2px) scale(1.02); filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.6)); }
+  100% { transform: translateY(0px) scale(1); filter: drop-shadow(0 0 2px rgba(56, 189, 248, 0.3)); }
+}
+
+.animate-logo {
+  animation: float-glow 4s ease-in-out infinite;
+  will-change: transform, filter;
+}
