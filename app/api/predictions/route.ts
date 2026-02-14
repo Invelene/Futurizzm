@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export async function GET(req: NextRequest) {
-    if (!supabase) {
-        return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    if (!supabaseAdmin) {
+        return NextResponse.json({ error: 'Admin database access not configured' }, { status: 503 });
     }
 
     const { searchParams } = new URL(req.url);
@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Date parameter required' }, { status: 400 });
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
         .from('predictions')
         .select('*')
         .eq('date', date)

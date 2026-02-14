@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase-admin"
 import { NextResponse } from "next/server"
 
 /**
@@ -6,13 +6,13 @@ import { NextResponse } from "next/server"
  * Returns all unique dates that have predictions in the database
  */
 export async function GET() {
-    if (!supabase) {
-        return NextResponse.json({ error: "Database not configured" }, { status: 500 })
+    if (!supabaseAdmin) {
+        return NextResponse.json({ error: "Admin database access not configured" }, { status: 500 })
     }
 
     try {
         // Get distinct dates from predictions table, ordered descending (newest first)
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
             .from("predictions")
             .select("date")
             .order("date", { ascending: false })

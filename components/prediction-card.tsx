@@ -3,7 +3,7 @@
 import type React from "react";
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import { Heart, Share2, Copy, X, Check } from "lucide-react";
+import { Share2, Copy, X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface Prediction {
@@ -14,13 +14,11 @@ export interface Prediction {
 }
 
 export interface PredictionCardProps {
-  id?: string; // Database ID for likes
   category: string;
   categoryColor: string;
   model: string;
   modelVersion: string;
   predictions: Prediction[];
-  likesCount: number;
   date?: string;
   isSelected?: boolean;
   isLoading?: boolean;
@@ -33,41 +31,61 @@ export interface PredictionCardProps {
 const modelIcons: Record<string, React.ReactNode> = {
   GROK: (
     <div className="relative w-full h-full">
-      <Image src="/Grok.svg" alt="Grok" fill className="object-contain" />
+      <Image
+        src="/Grok.svg"
+        alt="Grok"
+        fill
+        className="object-contain"
+        sizes="28px"
+      />
     </div>
   ),
   CLAUDE: (
     <div className="relative w-full h-full">
-      <Image src="/Claude.svg" alt="Claude" fill className="object-contain" />
+      <Image
+        src="/Claude.svg"
+        alt="Claude"
+        fill
+        className="object-contain"
+        sizes="28px"
+      />
     </div>
   ),
   GPT: (
     <div className="relative w-full h-full">
-      <Image src="/ChatGPT.svg" alt="GPT" fill className="object-contain" />
+      <Image
+        src="/ChatGPT.svg"
+        alt="GPT"
+        fill
+        className="object-contain"
+        sizes="28px"
+      />
     </div>
   ),
   GEMINI: (
     <div className="relative w-full h-full">
-      <Image src="/Gemini.svg" alt="Gemini" fill className="object-contain" />
+      <Image
+        src="/Gemini.svg"
+        alt="Gemini"
+        fill
+        className="object-contain"
+        sizes="28px"
+      />
     </div>
   ),
 };
 
 export function PredictionCard({
-  id,
   category,
   categoryColor,
   model,
   modelVersion,
   predictions,
-  likesCount,
   date = "jan 31",
   isSelected = false,
   isLoading = false,
   onSwipe,
 }: PredictionCardProps) {
-  const [liked, setLiked] = useState(false);
-  const [displayLikes, setDisplayLikes] = useState(likesCount);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [copied, setCopied] = useState(false);
   const shareMenuRef = useRef<HTMLDivElement>(null);
@@ -125,19 +143,6 @@ export function PredictionCard({
     setTouchStart(null);
   };
 
-  // Check localStorage for like status
-  useEffect(() => {
-    if (id) {
-      const likeKey = `liked_${id}`;
-      setLiked(localStorage.getItem(likeKey) === "true");
-    }
-  }, [id]);
-
-  // Update display likes when prop changes
-  useEffect(() => {
-    setDisplayLikes(likesCount);
-  }, [likesCount]);
-
   // Close share menu on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -151,40 +156,6 @@ export function PredictionCard({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  const handleLike = async () => {
-    if (!id) return;
-
-    const newLiked = !liked;
-    const likeKey = `liked_${id}`;
-
-    // Optimistic update
-    setLiked(newLiked);
-    setDisplayLikes((prev) => (newLiked ? prev + 1 : Math.max(0, prev - 1)));
-    localStorage.setItem(likeKey, String(newLiked));
-
-    // Send to API
-    try {
-      await fetch("/api/predictions/like", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          predictionId: id,
-          action: newLiked ? "like" : "unlike",
-        }),
-      });
-    } catch (error) {
-      // Revert on error
-      setLiked(!newLiked);
-      setDisplayLikes((prev) => (newLiked ? prev - 1 : prev + 1));
-      localStorage.setItem(likeKey, String(!newLiked));
-    }
-  };
-
-  const formatLikes = (count: number): string => {
-    if (count >= 1000) return `${(count / 1000).toFixed(1)}k`;
-    return String(count);
-  };
 
   // Generate share text
   const getShareText = () => {
@@ -224,25 +195,6 @@ export function PredictionCard({
   const handleShareToTwitter = () => {
     const text = encodeURIComponent(getShareText());
     window.open(`https://twitter.com/intent/tweet?text=${text}`, "_blank");
-    setShowShareMenu(false);
-  };
-
-  const handleShareToFacebook = () => {
-    const url = encodeURIComponent("https://futurizzm.com");
-    window.open(
-      `https://www.facebook.com/sharer/sharer.php?u=${url}`,
-      "_blank",
-    );
-    setShowShareMenu(false);
-  };
-
-  const handleShareToLinkedIn = () => {
-    const url = encodeURIComponent("https://futurizzm.com");
-    const text = encodeURIComponent(getShareText());
-    window.open(
-      `https://www.linkedin.com/sharing/share-offsite/?url=${url}`,
-      "_blank",
-    );
     setShowShareMenu(false);
   };
 
@@ -342,22 +294,7 @@ export function PredictionCard({
       </div>
 
       {/* Footer actions */}
-      <div className="flex items-center justify-between pt-2 border-t border-border/30 mt-auto">
-        <button
-          onClick={handleLike}
-          className={cn(
-            "flex items-center gap-1.5 text-xs md:text-sm transition-colors",
-            liked
-              ? "text-red-500"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          <Heart
-            className={cn("w-3 h-3 md:w-4 md:h-4", liked && "fill-current")}
-          />
-          <span className="font-mono">{formatLikes(displayLikes)}</span>
-        </button>
-
+      <div className="flex items-center justify-center pt-2 border-t border-border/30 mt-auto">
         {/* Share menu */}
         <div className="relative" ref={shareMenuRef}>
           <button
@@ -368,7 +305,7 @@ export function PredictionCard({
           </button>
 
           {showShareMenu && (
-            <div className="absolute right-0 bottom-full mb-2 bg-card border border-border rounded-lg shadow-lg py-2 min-w-[160px] z-50">
+            <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 bg-card border border-border rounded-lg shadow-lg py-2 min-w-[160px] z-50">
               <button
                 onClick={handleCopyToClipboard}
                 className="w-full px-3 py-2 text-xs flex items-center gap-2 hover:bg-secondary transition-colors"
@@ -386,20 +323,6 @@ export function PredictionCard({
               >
                 <X className="w-3 h-3" />
                 Share to X
-              </button>
-              <button
-                onClick={handleShareToFacebook}
-                className="w-full px-3 py-2 text-xs flex items-center gap-2 hover:bg-secondary transition-colors"
-              >
-                <span className="w-3 h-3 font-bold text-[10px]">f</span>
-                Share to Facebook
-              </button>
-              <button
-                onClick={handleShareToLinkedIn}
-                className="w-full px-3 py-2 text-xs flex items-center gap-2 hover:bg-secondary transition-colors"
-              >
-                <span className="w-3 h-3 font-bold text-[10px]">in</span>
-                Share to LinkedIn
               </button>
             </div>
           )}

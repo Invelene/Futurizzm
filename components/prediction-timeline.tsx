@@ -528,7 +528,7 @@ export const PredictionTimeline = forwardRef<
                     if (el) scrollRefs.current.set(modelIndex, el);
                   }}
                   onScroll={handleScroll}
-                  className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                  className="flex-1 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
                   style={{ scrollSnapType: "y mandatory" }}
                 >
                   <div className="flex flex-col">
@@ -562,7 +562,6 @@ export const PredictionTimeline = forwardRef<
                             }}
                           >
                             <PredictionCard
-                              id={pred?.id}
                               category={
                                 pred?.category || "Awaiting Predictions"
                               }
@@ -573,7 +572,7 @@ export const PredictionTimeline = forwardRef<
                               model={config.model}
                               modelVersion={config.modelVersion}
                               predictions={pred?.predictions || []}
-                              likesCount={pred?.likes_count || 0}
+                              predictions={pred?.predictions || []}
                               date={formatDateDisplay(dateStr)}
                               isSelected={selectedModel === modelIndex}
                               isLoading={isLoading}

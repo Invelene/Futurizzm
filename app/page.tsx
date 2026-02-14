@@ -58,6 +58,9 @@ export default function HomePage() {
     setHighlightedDate(day);
     setSelectedModel(null);
     setScrollAllMode(true);
+
+    // Force scroll to date (needed if selectedDate hasn't changed but user scrolled away)
+    timelineRef.current?.scrollToDate(day);
   };
 
   const handleModelSelect = (modelIndex: number | null) => {

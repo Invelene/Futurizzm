@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 import { MODEL_CONFIG } from '@/lib/database.types'
 import { getPredictionDate } from '@/lib/time-utils'
 
@@ -9,7 +9,7 @@ type ModelKey = typeof MODEL_KEYS[number]
 // GET: Check which models have predictions for today
 // POST: Verify and retry missing models
 export async function GET(req: NextRequest) {
-  if (!supabase) {
+  if (!supabaseAdmin) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
   }
 
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   const date = searchParams.get('date') || getPredictionDate()
 
   // Check which models have predictions
-  const { data: predictions, error } = await supabase
+  const { data: predictions, error } = await supabaseAdmin
     .from('predictions')
     .select('model, category, created_at')
     .eq('date', date)
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!supabase) {
+  if (!supabaseAdmin) {
     return NextResponse.json({ error: 'Database not configured' }, { status: 503 })
   }
 
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   const date = searchParams.get('date') || getPredictionDate()
 
   // Check which models are missing
-  const { data: predictions, error } = await supabase
+  const { data: predictions, error } = await supabaseAdmin
     .from('predictions')
     .select('model')
     .eq('date', date)

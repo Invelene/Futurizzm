@@ -1,6 +1,6 @@
 import { generateText } from "ai"
 import { z } from "zod"
-import { supabase } from "@/lib/supabase"
+import { supabaseAdmin } from "@/lib/supabase-admin"
 import { MODEL_CONFIG, type PredictionItem } from "@/lib/database.types"
 import { getTrendingCategories, type TrendingCategory } from "@/lib/trends"
 import { getPredictionDate } from "@/lib/time-utils"
@@ -99,13 +99,13 @@ async function verifyAndRetryPredictions(
   const retried: ModelKey[] = []
   const failed: ModelKey[] = []
   
-  if (!supabase) {
-    console.error('Supabase not configured, skipping verification')
+  if (!supabaseAdmin) {
+    console.error('Supabase Admin not configured, skipping verification')
     return { verified: MODEL_KEYS.slice() as unknown as ModelKey[], retried, failed }
   }
   
   // Check which models have predictions for today
-  const { data: existingPredictions, error } = await supabase
+  const { data: existingPredictions, error } = await supabaseAdmin
     .from('predictions')
     .select('model')
     .eq('date', predictionDate)
@@ -176,6 +176,17 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   // Cron endpoint - generate predictions for all models
+
+  // CRITICAL: Fail fast if database isn't configured
+  // Prevents burning AI API credits when predictions can't be stored
+  if (!supabaseAdmin) {
+    console.error('CRON FAILURE: supabaseAdmin is null. SUPABASE_SERVICE_ROLE_KEY not set.')
+    return Response.json({ 
+      error: 'Database not configured. Set SUPABASE_SERVICE_ROLE_KEY environment variable.',
+      timestamp: new Date().toISOString()
+    }, { status: 503 })
+  }
+
   const { searchParams } = new URL(req.url)
   const cronSecret = searchParams.get('secret')
 
@@ -184,7 +195,7 @@ export async function GET(req: Request) {
   //   return Response.json({ error: 'Unauthorized' }, { status: 401 })
   // }
 
-  // Get the prediction date (tomorrow in EST)
+  // Get the prediction date
   const predictionDate = getPredictionDate()
   console.log(`Generating predictions for date: ${predictionDate}`)
 
@@ -264,14 +275,16 @@ Task: Use web search to predict what is LIKELY TO HAPPEN on ${predictionDate} fo
 
 RULES:
 - It is currently 5:00 AM Pacific Time on ${predictionDate}
-- First sentence will be the prediction (use the word "will" when necessary), second or third sentences will be the reasons the prediction is likely to happen
+- First sentence will be the prediction (use the word "will" when necessary), second and/or third sentences will be the reasons the prediction is likely to happen
 - Don't predict scheduled events or obvious outcomes
 - Don't predict events that are too far in the future
 - When working on predictions, pick up on signals or overlooked reasons that could lead to unexpected outcomes or events
 - Be insightful and initiative
+- Don't ever sound like a news report, rather demonstrate insight in your prediction tone
+- Don't Sound generic or say obvious things already known to happen on ${predictionDate} 
 - Try to become good at predicting the future
 - Be exact, Call names of persons, events, things, activities, or places
-- Prioritize insightful details
+- Prioritize insightful details and strictly avoid stating obvious statements in reasons for prediction
 - You are allowed to use web search to find information to help make predictions
 - Don't repeat the words "overlooked signals" or other words in these rules in your responses
 - Trending topics are information clues for you to tactically deduce nuances for predictions that are not obvious or predictable
@@ -402,8 +415,8 @@ CRITICAL: Do NOT write any text before or after the JSON. No "Based on my resear
     }))
 
     // Store in Supabase (only if configured)
-    if (supabase) {
-      const { error: dbError } = await supabase.from('predictions').upsert({
+    if (supabaseAdmin) {
+      const { error: dbError } = await supabaseAdmin.from('predictions').upsert({
         date: predictionDate,
         model: modelKey,
         category: aiGeneratedCategory, // Use AI-generated category

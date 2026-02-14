@@ -13,7 +13,6 @@ export interface Prediction {
     model: 'grok' | 'claude' | 'gpt' | 'gemini';
     category: string;                // Single word from trends
     predictions: PredictionItem[];   // Array of 3 items
-    likes_count: number;
     created_at: string;
 }
 
