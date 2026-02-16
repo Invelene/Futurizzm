@@ -965,7 +965,7 @@ function MobileTimeline({
       {/* Scroll container with hover effect */}
       <div
         ref={scrollContainerRef}
-        className={`h-[70vh] overflow-y-auto overflow-x-hidden px-3 py-4 transition-all duration-150 ${
+        className={`h-[70vh] overflow-y-auto overflow-x-hidden px-3 py-4 transition-all duration-150 overscroll-contain ${
           isScrolling ? "ring-1 ring-foreground/20 ring-inset" : ""
         }`}
         style={{
