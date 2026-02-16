@@ -451,25 +451,47 @@ function MobileCalendar({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Auto-scroll mobile calendar to center on highlighted date on mount
+  // Auto-scroll mobile calendar to center on highlighted date on mount or major changes
+  // We use a ref to track if the user is interacting to avoid fighting their scroll
+  const isInteractingRef = useRef(false);
+
   useEffect(() => {
-    if (!scrollRef.current) return;
+    if (!scrollRef.current || isInteractingRef.current) return;
+
+    // Only auto-scroll if the highlighted date is NOT currently visible
     const btn = scrollRef.current.querySelector(
       `[data-day="${highlightedDate}"]`,
     ) as HTMLElement;
+
     if (btn) {
-      // Use requestAnimationFrame to ensure DOM is laid out
-      requestAnimationFrame(() => {
-        btn.scrollIntoView({ inline: "center", behavior: "auto" });
-      });
+      const container = scrollRef.current;
+      const containerRect = container.getBoundingClientRect();
+      const btnRect = btn.getBoundingClientRect();
+
+      // Check if button is fully visible horizontally
+      const isVisible =
+        btnRect.left >= containerRect.left &&
+        btnRect.right <= containerRect.right;
+
+      if (!isVisible) {
+        requestAnimationFrame(() => {
+          btn.scrollIntoView({ inline: "center", behavior: "smooth" });
+        });
+      }
     }
   }, [highlightedDate]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    isInteractingRef.current = true;
     setTouchStart({ x: e.touches[0].clientX, time: Date.now() });
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
+    // Keep interaction flag true for a bit after touch ends to account for momentum
+    setTimeout(() => {
+      isInteractingRef.current = false;
+    }, 1000);
+
     if (!touchStart || !scrollRef.current) return;
 
     const touchEnd = e.changedTouches[0].clientX;
