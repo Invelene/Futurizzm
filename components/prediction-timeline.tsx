@@ -844,21 +844,36 @@ function MobileTimeline({
   useEffect(() => {
     if (!scrollContainerRef.current || availableDates.length === 0) return;
 
+    // Skip if we are currently scrolling manually (to avoid fighting)
+    if (isScrolling) return;
+
     const container = scrollContainerRef.current;
+
+    // Calculate position manually to avoid page scroll
+    // We can't use scrollIntoView because it scrolls the whole page
     const targetCard = container.querySelector(
       `[data-date-index="${selectedDateIndex}"]`,
     ) as HTMLElement;
 
     if (targetCard) {
       isScrollingToDateRef.current = true;
-      targetCard.scrollIntoView({ behavior: "smooth", block: "start" });
+
+      const containerTop = container.getBoundingClientRect().top;
+      const cardTop = targetCard.getBoundingClientRect().top;
+      const currentScroll = container.scrollTop;
+      const newScroll = currentScroll + (cardTop - containerTop) - 20; // 20px padding
+
+      container.scrollTo({
+        top: newScroll,
+        behavior: "smooth",
+      });
 
       // Reset flag after scroll completes
       setTimeout(() => {
         isScrollingToDateRef.current = false;
       }, 500);
     }
-  }, [selectedDateIndex, availableDates.length]);
+  }, [selectedDateIndex, availableDates.length]); // isScrolling intentionally omitted to avoid loops
 
   // Handle scroll end detection for hover effect
   const handleScrollEnd = useCallback(() => {
@@ -961,11 +976,11 @@ function MobileTimeline({
   };
 
   return (
-    <div className="md:hidden relative">
-      {/* Scroll container with hover effect */}
+    <div className="md:hidden relative flex justify-center">
+      {/* Scroll container with reduced width for side taps */}
       <div
         ref={scrollContainerRef}
-        className={`h-[70vh] overflow-y-auto overflow-x-hidden px-3 py-4 transition-all duration-150 overscroll-contain ${
+        className={`h-[70vh] w-[85vw] max-w-md overflow-y-auto overflow-x-hidden px-3 py-4 transition-all duration-150 overscroll-contain ${
           isScrolling ? "ring-1 ring-foreground/20 ring-inset" : ""
         }`}
         style={{

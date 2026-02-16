@@ -341,7 +341,7 @@ export function CalendarSidebar({
                 }}
                 disabled={!hasPred}
                 className={cn(
-                  "w-8 h-8 rounded flex items-center justify-center font-mono text-sm transition-all duration-200",
+                  "w-8 h-8 rounded flex items-center justify-center font-mono text-sm transition-all duration-300 ease-in-out",
                   highlightedDate === day
                     ? "bg-foreground text-background scale-110 font-bold"
                     : hasPred
@@ -546,7 +546,7 @@ function MobileCalendar({
                 }}
                 disabled={!hasPred}
                 className={cn(
-                  "w-9 h-9 rounded flex items-center justify-center font-mono text-sm transition-all duration-200 shrink-0",
+                  "w-9 h-9 rounded flex items-center justify-center font-mono text-sm transition-all duration-300 ease-in-out shrink-0",
                   highlightedDate === day
                     ? "bg-foreground text-background font-bold"
                     : hasPred
