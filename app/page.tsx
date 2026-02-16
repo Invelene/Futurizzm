@@ -165,8 +165,6 @@ export default function HomePage() {
           onReset={handleReset}
         />
       </div>
-
-      <Footer />
     </div>
   );
 }
