@@ -49,11 +49,15 @@ interface PredictionTimelineProps {
   onModelSelect: (modelIndex: number | null) => void;
   scrollAllMode: boolean;
   onLatestDateAvailable?: (latestDate: number) => void; // Callback when latest date is known
-  onVisibleDateChange?: (visibleDate: number) => void; // Callback when visible date changes (at 2/3 position)
+  onVisibleDateChange?: (info: {
+    day: number;
+    month: number;
+    year: number;
+  }) => void; // Callback when visible date changes
 }
 
-interface PredictionTimelineRef {
-  scrollToDate: (date: number) => void;
+export interface PredictionTimelineRef {
+  scrollToDate: (date: number | string) => void;
 }
 
 interface PredictionsByModel {
@@ -200,21 +204,42 @@ export const PredictionTimeline = forwardRef<
     fetchedAvailableDatesRef.current = true;
 
     async function fetchAvailableDates() {
-      try {
-        const response = await fetch("/api/predictions/dates");
-        if (response.ok) {
-          const data = await response.json();
-          if (data.dates && data.dates.length > 0) {
-            setAvailableDates(data.dates); // Already sorted descending from API
-          } else {
-            // Fallback to current prediction date if no dates in DB
-            setAvailableDates([getPredictionDate()]);
+      const maxRetries = 3;
+      let attempt = 0;
+      let delay = 1000;
+
+      while (attempt < maxRetries) {
+        try {
+          const response = await fetch("/api/predictions/dates");
+          if (response.ok) {
+            const data = await response.json();
+            if (data.dates && data.dates.length > 0) {
+              setAvailableDates(data.dates); // Already sorted descending from API
+              return; // Success, exit
+            } else {
+              // Valid response but no dates
+              setAvailableDates([getPredictionDate()]);
+              return;
+            }
           }
+          // If 500 error, throw to trigger retry
+          if (response.status >= 500) {
+            throw new Error(`Server error: ${response.status}`);
+          }
+          // If 4xx, don't retry, just fallback
+          console.error("Client error fetching dates:", response.status);
+          break;
+        } catch (error) {
+          attempt++;
+          console.error(`Attempt ${attempt} failed to fetch dates:`, error);
+          if (attempt >= maxRetries) break;
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          delay *= 2; // Exponential backoff
         }
-      } catch (error) {
-        console.error("Failed to fetch available dates:", error);
-        setAvailableDates([getPredictionDate()]);
       }
+
+      // Fallback if all retries failed
+      setAvailableDates([getPredictionDate()]);
     }
     fetchAvailableDates();
   }, []);
@@ -229,51 +254,68 @@ export const PredictionTimeline = forwardRef<
     }
   }, [availableDates, onLatestDateAvailable]);
 
-  // IntersectionObserver to detect when cards reach 2/3 viewport position for calendar highlight
+  // Scroll-based highlight detection: finds which date card is most visible in the first column
+  // Only fires when scrollAllMode is true (all columns moving together)
+  const scrollAllModeRef = useRef(scrollAllMode);
+  const lastReportedDateRef = useRef<string | null>(null);
+
+  // Keep ref in sync with prop
+  useEffect(() => {
+    scrollAllModeRef.current = scrollAllMode;
+  }, [scrollAllMode]);
+
+  const updateVisibleDate = useCallback(() => {
+    if (!onVisibleDateChange || !scrollAllModeRef.current) return;
+
+    // Use first column as reference
+    const container = scrollRefs.current.get(0);
+    if (!container) return;
+
+    const cards = container.querySelectorAll("[data-date]");
+    if (!cards.length) return;
+
+    const containerTop = container.scrollTop;
+    const containerHeight = container.clientHeight;
+    const containerBottom = containerTop + containerHeight;
+
+    let bestDate: string | null = null;
+    let bestVisibleArea = 0;
+
+    cards.forEach((card) => {
+      const el = card as HTMLElement;
+      const elTop = el.offsetTop;
+      const elBottom = elTop + el.offsetHeight;
+
+      // Calculate how much of this card is visible in the container viewport
+      const visibleTop = Math.max(elTop, containerTop);
+      const visibleBottom = Math.min(elBottom, containerBottom);
+      const visibleArea = Math.max(0, visibleBottom - visibleTop);
+
+      if (visibleArea > bestVisibleArea) {
+        bestVisibleArea = visibleArea;
+        bestDate = el.getAttribute("data-date");
+      }
+    });
+
+    if (bestDate) {
+      if (bestDate !== lastReportedDateRef.current) {
+        lastReportedDateRef.current = bestDate;
+        const { day, month, year } = parseDateString(bestDate);
+        onVisibleDateChange({ day, month, year });
+      }
+    }
+  }, [onVisibleDateChange]);
+
+  // Legacy observer refs kept for registerCardForVisibility compatibility
   const visibleDateObserverRef = useRef<IntersectionObserver | null>(null);
   const observedCardsRef = useRef<Set<Element>>(new Set());
 
-  useEffect(() => {
-    if (!onVisibleDateChange) return;
-
-    // Create observer that triggers when card is at 2/3 (66%) down the viewport
-    // rootMargin: "-66% 0px 0px 0px" means the observation zone is 66% from the top
-    visibleDateObserverRef.current = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const dateStr = entry.target.getAttribute("data-date");
-            if (dateStr) {
-              const { day } = parseDateString(dateStr);
-              onVisibleDateChange(day);
-            }
-          }
-        });
-      },
-      {
-        root: null, // viewport
-        rootMargin: "-66% 0px 0px 0px", // 2/3 down from top
-        threshold: 0,
-      },
-    );
-
-    // Observe all currently tracked cards
-    observedCardsRef.current.forEach((el) => {
-      visibleDateObserverRef.current?.observe(el);
-    });
-
-    return () => {
-      visibleDateObserverRef.current?.disconnect();
-    };
-  }, [onVisibleDateChange]);
-
-  // Function to register card for visibility observation
+  // Function to register card for visibility observation (kept for ref callback compatibility)
   const registerCardForVisibility = useCallback(
     (el: HTMLElement | null, dateStr: string) => {
       if (el && !observedCardsRef.current.has(el)) {
         el.setAttribute("data-date", dateStr);
         observedCardsRef.current.add(el);
-        visibleDateObserverRef.current?.observe(el);
       }
     },
     [],
@@ -316,43 +358,41 @@ export const PredictionTimeline = forwardRef<
     });
   }, [availableDates, fetchPredictionsForDate]);
 
-  const scrollModel = useCallback(
-    (modelIndex: number, direction: "up" | "down") => {
-      const container = scrollRefs.current.get(modelIndex);
-      if (container) {
-        const amount = direction === "up" ? -scrollAmount : scrollAmount;
-        container.scrollBy({
-          top: amount,
-          behavior: "smooth",
+  // DOM-based scrollToDate — finds the actual card element instead of computing pixel offsets
+  const scrollToDate = useCallback(
+    (date: number | string) => {
+      let targetDateStr: string | undefined;
+
+      if (typeof date === "string") {
+        targetDateStr = availableDates.find((d) => d === date);
+      } else {
+        targetDateStr = availableDates.find((dateStr) => {
+          const parsed = parseDateString(dateStr);
+          return parsed.day === date;
         });
       }
-    },
-    [],
-  );
 
-  const scrollToDate = useCallback(
-    (date: number) => {
-      // Find the date string that matches this day number
-      const dateIndex = availableDates.findIndex((dateStr) => {
-        const parsed = parseDateString(dateStr);
-        return parsed.day === date;
-      });
-      if (dateIndex === -1) return;
-
-      const targetScroll = dateIndex * totalRowHeight;
+      if (!targetDateStr) return;
 
       scrollRefs.current.forEach((container) => {
-        container.scrollTo({
-          top: targetScroll,
-          behavior: "smooth",
-        });
+        const targetEl = container.querySelector(
+          `[data-date="${targetDateStr}"]`,
+        ) as HTMLElement;
+        if (targetEl) {
+          // Offset by 20px so the date label at the top of the card stays visible
+          const scrollOffset = Math.max(0, targetEl.offsetTop - 20);
+          container.scrollTo({
+            top: scrollOffset,
+            behavior: "smooth",
+          });
+        }
       });
 
       setTimeout(() => {
         setIsAligned(true);
       }, 500);
     },
-    [totalRowHeight, availableDates],
+    [availableDates],
   );
 
   useImperativeHandle(
@@ -365,41 +405,177 @@ export const PredictionTimeline = forwardRef<
 
   const handleScroll = useCallback(() => {
     setIsAligned(false);
+    updateVisibleDate();
 
     setTimeout(() => {
-      let finalAligned = true;
-      scrollRefs.current.forEach((container) => {
-        const scrollPos = container.scrollTop;
-        const remainder = scrollPos % totalRowHeight;
-        if (remainder >= 10 && remainder <= totalRowHeight - 10) {
-          finalAligned = false;
+      setIsAligned(true);
+    }, 150);
+  }, []);
+
+  // Helper: get the index of the currently visible date in a container
+  const getVisibleDateIndex = useCallback(
+    (container: HTMLDivElement): number => {
+      const containerTop = container.scrollTop;
+      const cards = container.querySelectorAll("[data-date]");
+      let bestIndex = 0;
+      let bestDist = Infinity;
+      cards.forEach((card, i) => {
+        const el = card as HTMLElement;
+        const dist = Math.abs(el.offsetTop - containerTop);
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestIndex = i;
         }
       });
-      setIsAligned(finalAligned);
-    }, 150);
-  }, [totalRowHeight]);
+      return bestIndex;
+    },
+    [],
+  );
+
+  // Check if all columns are currently showing the same date
+  const areColumnsSynced = useCallback((): boolean => {
+    const indices: number[] = [];
+    scrollRefs.current.forEach((container) => {
+      indices.push(getVisibleDateIndex(container));
+    });
+    return indices.every((idx) => idx === indices[0]);
+  }, [getVisibleDateIndex]);
+
+  // Navigate to specific date index across all (or selected) columns
+  const scrollToDateIndex = useCallback(
+    (dateIndex: number) => {
+      const dateStr = availableDates[dateIndex];
+      if (!dateStr) return;
+
+      scrollRefs.current.forEach((container) => {
+        const targetEl = container.querySelector(
+          `[data-date="${dateStr}"]`,
+        ) as HTMLElement;
+        if (targetEl) {
+          container.scrollTo({
+            top: targetEl.offsetTop,
+            behavior: "smooth",
+          });
+        }
+      });
+    },
+    [availableDates],
+  );
 
   const navigateUp = () => {
-    setIsAligned(false);
     if (scrollAllMode) {
-      modelDisplayConfigs.forEach((_, index) => {
-        scrollModel(index, "up");
+      if (!areColumnsSynced()) {
+        const anchorDate = lastReportedDateRef.current || selectedDate;
+        scrollToDate(anchorDate);
+        return;
+      }
+      // Normal smooth scroll for all columns
+      scrollRefs.current.forEach((container) => {
+        container.scrollBy({ top: -150, behavior: "smooth" });
       });
     } else if (selectedModel !== null) {
-      scrollModel(selectedModel, "up");
+      const container = scrollRefs.current.get(selectedModel);
+      if (container) {
+        container.scrollBy({ top: -150, behavior: "smooth" });
+      }
     }
   };
 
   const navigateDown = () => {
-    setIsAligned(false);
     if (scrollAllMode) {
-      modelDisplayConfigs.forEach((_, index) => {
-        scrollModel(index, "down");
+      if (!areColumnsSynced()) {
+        const anchorDate = lastReportedDateRef.current || selectedDate;
+        scrollToDate(anchorDate);
+        return;
+      }
+      scrollRefs.current.forEach((container) => {
+        container.scrollBy({ top: 150, behavior: "smooth" });
       });
     } else if (selectedModel !== null) {
-      scrollModel(selectedModel, "down");
+      const container = scrollRefs.current.get(selectedModel);
+      if (container) {
+        container.scrollBy({ top: 150, behavior: "smooth" });
+      }
     }
   };
+
+  // Keyboard listener: RAF-based smooth continuous scroll for held arrow keys
+  const scrollRafRef = useRef<number | null>(null);
+  const scrollDirectionRef = useRef<"up" | "down" | null>(null);
+
+  useEffect(() => {
+    const scrollSpeed = 4; // pixels per frame (~240px/s at 60fps)
+
+    const doRafScroll = () => {
+      const dir = scrollDirectionRef.current;
+      if (!dir) return;
+
+      const amount = dir === "up" ? -scrollSpeed : scrollSpeed;
+
+      if (scrollAllMode) {
+        scrollRefs.current.forEach((container) => {
+          container.scrollTop += amount;
+        });
+      } else if (selectedModel !== null) {
+        const container = scrollRefs.current.get(selectedModel);
+        if (container) container.scrollTop += amount;
+      }
+
+      // Update highlight during continuous scroll
+      updateVisibleDate();
+
+      scrollRafRef.current = requestAnimationFrame(doRafScroll);
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        e.preventDefault();
+
+        if (e.repeat) {
+          // Key is held — start RAF loop if not already running
+          const dir = e.key === "ArrowUp" ? "up" : "down";
+          if (scrollDirectionRef.current !== dir) {
+            scrollDirectionRef.current = dir;
+            if (!scrollRafRef.current) {
+              scrollRafRef.current = requestAnimationFrame(doRafScroll);
+            }
+          }
+        } else {
+          // Single press — use nav arrow logic (includes re-sync)
+          if (e.key === "ArrowUp") navigateUp();
+          else navigateDown();
+        }
+      } else if (e.key === "Escape" && selectedModel !== null) {
+        e.preventDefault();
+        onModelSelect(null);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+        scrollDirectionRef.current = null;
+        if (scrollRafRef.current) {
+          cancelAnimationFrame(scrollRafRef.current);
+          scrollRafRef.current = null;
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
+    };
+  }, [scrollAllMode, selectedModel, selectedDate, updateVisibleDate]);
 
   useEffect(() => {
     scrollToDate(selectedDate);
@@ -529,7 +705,7 @@ export const PredictionTimeline = forwardRef<
                   }}
                   onScroll={handleScroll}
                   className="flex-1 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-                  style={{ scrollSnapType: "y mandatory" }}
+                  style={{ scrollSnapType: "y proximity" }}
                 >
                   <div className="flex flex-col">
                     {availableDates.map((dateStr, dayIndex) => {
@@ -542,6 +718,7 @@ export const PredictionTimeline = forwardRef<
                       return (
                         <div
                           key={`${dateStr}-${config.model}`}
+                          data-date={dateStr}
                           style={{ scrollSnapAlign: "start" }}
                         >
                           <div
@@ -571,7 +748,6 @@ export const PredictionTimeline = forwardRef<
                               )}
                               model={config.model}
                               modelVersion={config.modelVersion}
-                              predictions={pred?.predictions || []}
                               predictions={pred?.predictions || []}
                               date={formatDateDisplay(dateStr)}
                               isSelected={selectedModel === modelIndex}
@@ -630,7 +806,11 @@ interface MobileTimelineProps {
   // Controlled date props for calendar sync
   selectedDateIndex: number;
   onDateIndexChange: (index: number) => void;
-  onVisibleDateChange?: (day: number) => void;
+  onVisibleDateChange?: (info: {
+    day: number;
+    month: number;
+    year: number;
+  }) => void;
 }
 
 function MobileTimeline({
@@ -714,8 +894,10 @@ function MobileTimeline({
         if (dateIndex !== selectedDateIndex) {
           onDateIndexChange(dateIndex);
           if (onVisibleDateChange && availableDates[dateIndex]) {
-            const { day } = parseDateString(availableDates[dateIndex]);
-            onVisibleDateChange(day);
+            const { day, month, year } = parseDateString(
+              availableDates[dateIndex],
+            );
+            onVisibleDateChange({ day, month, year });
           }
         }
         break;
@@ -816,7 +998,6 @@ function MobileTimeline({
                 className="flex justify-center"
               >
                 <PredictionCard
-                  id={pred?.id}
                   category={pred?.category || "Loading..."}
                   categoryColor={getCategoryColor(
                     pred?.category || "",
@@ -825,7 +1006,6 @@ function MobileTimeline({
                   model={config.model}
                   modelVersion={config.modelVersion}
                   predictions={pred?.predictions || []}
-                  likesCount={pred?.likes_count || 0}
                   date={formatDateDisplay(dateStr)}
                   isLoading={isLoading || !pred}
                 />

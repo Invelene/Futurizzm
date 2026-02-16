@@ -31,13 +31,17 @@ const START_YEAR = 2026;
 interface CalendarSidebarProps {
   selectedDate: number;
   highlightedDate: number;
-  onDateSelect: (date: number) => void;
+  highlightedMonth: number | null;
+  highlightedYear: number | null;
+  onDateSelect: (date: number | string) => void;
   onReset: () => void;
 }
 
 export function CalendarSidebar({
   selectedDate,
   highlightedDate,
+  highlightedMonth,
+  highlightedYear,
   onDateSelect,
   onReset,
 }: CalendarSidebarProps) {
@@ -50,7 +54,17 @@ export function CalendarSidebar({
   const [lastDropdown, setLastDropdown] = useState<"month" | "year" | null>(
     null,
   );
-  const [calendarScrollIndex, setCalendarScrollIndex] = useState(0);
+  // Initialize scroll index so highlightedDate is visible in the 12-day window
+  const initialScrollIndex = Math.max(
+    0,
+    Math.min(
+      highlightedDate - 6,
+      new Date(selectedYear, MONTHS.indexOf(selectedMonth) + 1, 0).getDate() -
+        12,
+    ),
+  );
+  const [calendarScrollIndex, setCalendarScrollIndex] =
+    useState(initialScrollIndex);
   const [availablePredictionDates, setAvailablePredictionDates] = useState<
     Set<string>
   >(new Set());
@@ -61,18 +75,70 @@ export function CalendarSidebar({
   // Fetch available prediction dates
   useEffect(() => {
     async function fetchDates() {
-      try {
-        const response = await fetch("/api/predictions/dates");
-        if (response.ok) {
-          const data = await response.json();
-          setAvailablePredictionDates(new Set(data.dates || []));
+      const maxRetries = 3;
+      let attempt = 0;
+      let delay = 1000;
+
+      while (attempt < maxRetries) {
+        try {
+          const response = await fetch("/api/predictions/dates");
+          if (response.ok) {
+            const data = await response.json();
+            setAvailablePredictionDates(new Set(data.dates || []));
+            return;
+          }
+          if (response.status >= 500) {
+            throw new Error(`Server error: ${response.status}`);
+          }
+          console.error("Client error fetching dates:", response.status);
+          break;
+        } catch (error) {
+          attempt++;
+          console.error(`Attempt ${attempt} failed to fetch dates:`, error);
+          if (attempt >= maxRetries) break;
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          delay *= 2;
         }
-      } catch (error) {
-        console.error("Failed to fetch prediction dates:", error);
       }
     }
     fetchDates();
   }, []);
+
+  // Auto-scroll desktop calendar to show highlighted date whenever it changes
+  useEffect(() => {
+    const targetIndex = highlightedDate - 1; // 0-indexed
+    if (
+      targetIndex < calendarScrollIndex ||
+      targetIndex >= calendarScrollIndex + 12
+    ) {
+      const newIndex = Math.max(0, Math.min(targetIndex - 5, daysInMonth - 12));
+      setCalendarScrollIndex(newIndex);
+    }
+  }, [highlightedDate]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-switch month/year when timeline scrolls across month boundaries
+  useEffect(() => {
+    if (highlightedMonth !== null && highlightedYear !== null) {
+      const monthStr = MONTHS[highlightedMonth];
+      if (
+        monthStr &&
+        (monthStr !== selectedMonth || highlightedYear !== selectedYear)
+      ) {
+        setSelectedMonth(monthStr);
+        setSelectedYear(highlightedYear);
+        // Reset scroll index for new month
+        const newDaysInMonth = new Date(
+          highlightedYear,
+          highlightedMonth + 1,
+          0,
+        ).getDate();
+        const targetIdx = highlightedDate - 1;
+        setCalendarScrollIndex(
+          Math.max(0, Math.min(targetIdx - 5, newDaysInMonth - 12)),
+        );
+      }
+    }
+  }, [highlightedMonth, highlightedYear]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Click outside handler to close dropdowns
   useEffect(() => {
@@ -266,7 +332,13 @@ export function CalendarSidebar({
             return (
               <button
                 key={day}
-                onClick={() => hasPred && onDateSelect(day)}
+                onClick={() => {
+                  if (hasPred) {
+                    const monthIndex = MONTHS.indexOf(selectedMonth);
+                    const dateStr = `${selectedYear}-${String(monthIndex + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                    onDateSelect(dateStr);
+                  }
+                }}
                 disabled={!hasPred}
                 className={cn(
                   "w-8 h-8 rounded flex items-center justify-center font-mono text-sm transition-all duration-200",
@@ -326,7 +398,7 @@ function MobileCalendar({
 }: {
   monthDates: number[];
   highlightedDate: number;
-  onDateSelect: (date: number) => void;
+  onDateSelect: (date: number | string) => void;
   selectedMonth: string;
   selectedYear: number;
   onMonthSelect: (month: string) => void;
@@ -379,6 +451,20 @@ function MobileCalendar({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Auto-scroll mobile calendar to center on highlighted date on mount
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    const btn = scrollRef.current.querySelector(
+      `[data-day="${highlightedDate}"]`,
+    ) as HTMLElement;
+    if (btn) {
+      // Use requestAnimationFrame to ensure DOM is laid out
+      requestAnimationFrame(() => {
+        btn.scrollIntoView({ inline: "center", behavior: "auto" });
+      });
+    }
+  }, [highlightedDate]);
+
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart({ x: e.touches[0].clientX, time: Date.now() });
   };
@@ -428,7 +514,14 @@ function MobileCalendar({
             return (
               <button
                 key={day}
-                onClick={() => hasPred && onDateSelect(day)}
+                data-day={day}
+                onClick={() => {
+                  if (hasPred) {
+                    const monthIndex = MONTHS.indexOf(selectedMonth);
+                    const dateStr = `${selectedYear}-${String(MONTHS.indexOf(selectedMonth) + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                    onDateSelect(dateStr);
+                  }
+                }}
                 disabled={!hasPred}
                 className={cn(
                   "w-9 h-9 rounded flex items-center justify-center font-mono text-sm transition-all duration-200 shrink-0",

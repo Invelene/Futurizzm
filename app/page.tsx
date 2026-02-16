@@ -2,18 +2,20 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Header } from "@/components/header";
+import { Footer } from "@/components/footer";
 import {
   CountdownTimer,
   CountdownTimerMobile,
 } from "@/components/countdown-timer";
-import { PredictionTimeline } from "@/components/prediction-timeline";
+import {
+  PredictionTimeline,
+  type PredictionTimelineRef,
+} from "@/components/prediction-timeline";
 import { CalendarSidebar } from "@/components/calendar-sidebar";
 import { getPredictionDate, parseDateString } from "@/lib/time-utils";
 
-// Type for timeline ref
-interface PredictionTimelineRef {
-  scrollToDate: (date: number) => void;
-}
+// Type for timeline ref imported from component
+// interface PredictionTimelineRef removed to use imported type
 
 export default function HomePage() {
   // Initial date will be updated when timeline loads and reports latest available date
@@ -22,6 +24,8 @@ export default function HomePage() {
   const [selectedModel, setSelectedModel] = useState<number | null>(null);
   const [scrollAllMode, setScrollAllMode] = useState(true);
   const [highlightedDate, setHighlightedDate] = useState<number | null>(null);
+  const [highlightedMonth, setHighlightedMonth] = useState<number | null>(null);
+  const [highlightedYear, setHighlightedYear] = useState<number | null>(null);
   const initializedRef = useRef(false);
 
   // Ref to timeline for imperative scroll control
@@ -74,14 +78,18 @@ export default function HomePage() {
     }
   };
 
-  const handleDateSelect = useCallback((date: number) => {
-    setSelectedDate(date);
-    setHighlightedDate(date);
-    setModelDates([date, date, date, date]);
+  const handleDateSelect = useCallback((date: number | string) => {
+    // If string (YYYY-MM-DD), extract day. If number, use as is.
+    const day =
+      typeof date === "string" ? parseInt(date.split("-")[2], 10) : date;
+
+    setSelectedDate(day);
+    setHighlightedDate(day);
+    setModelDates([day, day, day, day]);
     setSelectedModel(null);
     setScrollAllMode(true);
 
-    // Scroll timeline to the selected date
+    // Scroll timeline to the selected date (pass string if available for precision)
     timelineRef.current?.scrollToDate(date);
   }, []);
 
@@ -119,7 +127,11 @@ export default function HomePage() {
                 onModelSelect={handleModelSelect}
                 scrollAllMode={scrollAllMode}
                 onLatestDateAvailable={handleLatestDateAvailable}
-                onVisibleDateChange={(date) => setHighlightedDate(date)}
+                onVisibleDateChange={({ day, month, year }) => {
+                  setHighlightedDate(day);
+                  setHighlightedMonth(month);
+                  setHighlightedYear(year);
+                }}
               />
             </div>
           </div>
@@ -129,6 +141,8 @@ export default function HomePage() {
           <CalendarSidebar
             selectedDate={selectedDate ?? 1}
             highlightedDate={highlightedDate ?? 1}
+            highlightedMonth={highlightedMonth}
+            highlightedYear={highlightedYear}
             onDateSelect={handleDateSelect}
             onReset={handleReset}
           />
@@ -145,10 +159,14 @@ export default function HomePage() {
         <CalendarSidebar
           selectedDate={selectedDate ?? 1}
           highlightedDate={highlightedDate ?? 1}
+          highlightedMonth={highlightedMonth}
+          highlightedYear={highlightedYear}
           onDateSelect={handleDateSelect}
           onReset={handleReset}
         />
       </div>
+
+      <Footer />
     </div>
   );
 }

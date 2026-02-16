@@ -2,8 +2,11 @@
 
 import { Menu } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { getTimeUntilReset } from "@/lib/time-utils";
+import { cn } from "@/lib/utils";
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -14,6 +17,7 @@ export function Header() {
     seconds: 0,
   });
 
+  const pathname = usePathname();
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -55,9 +59,18 @@ export function Header() {
 
   const formatTime = (num: number) => num.toString().padStart(2, "0");
 
+  const navLinks = [
+    { name: "Live", href: "/" },
+    { name: "Models", href: "/models" },
+    { name: "Info", href: "/info" },
+  ];
+
   return (
-    <header className="relative w-full px-4 md:px-6 py-4 flex items-center justify-between border-b border-border/30">
-      <div className="flex items-center gap-3">
+    <header className="relative w-full px-4 md:px-6 py-4 flex items-center justify-between border-b border-border/30 bg-background/80 backdrop-blur-sm z-50 sticky top-0">
+      <Link
+        href="/"
+        className="flex items-center gap-3 hover:opacity-90 transition-opacity"
+      >
         <div className="relative w-10 h-10 md:w-12 md:h-12 animate-logo">
           <Image
             src="/prediction.svg"
@@ -70,20 +83,29 @@ export function Header() {
         <span className="hidden md:inline text-xl md:text-2xl font-bold tracking-tight text-white font-mono">
           Futurizzm
         </span>
-      </div>
+      </Link>
 
       <nav className="hidden md:flex items-center gap-6 absolute left-1/2 -translate-x-1/2">
-        <button className="text-muted-foreground hover:text-foreground transition-colors font-mono text-sm">
-          Live
-        </button>
-        <span className="text-muted-foreground/30">|</span>
-        <button className="text-muted-foreground hover:text-foreground transition-colors font-mono text-sm">
-          Model
-        </button>
-        <span className="text-muted-foreground/30">|</span>
-        <button className="text-muted-foreground hover:text-foreground transition-colors font-mono text-sm">
-          Info
-        </button>
+        {navLinks.map((link, index) => (
+          <div key={link.name} className="flex items-center">
+            <Link
+              href={link.href}
+              className={cn(
+                "text-sm font-mono transition-colors duration-200",
+                pathname === link.href
+                  ? "text-foreground font-bold"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {link.name}
+            </Link>
+            {index < navLinks.length - 1 && (
+              <span className="text-muted-foreground/30 ml-6 select-none">
+                |
+              </span>
+            )}
+          </div>
+        ))}
       </nav>
 
       <button
@@ -112,18 +134,24 @@ export function Header() {
       {menuOpen && (
         <div
           ref={menuRef}
-          className="absolute top-14 left-0 right-0 bg-background border-b border-border/30 md:hidden z-50"
+          className="absolute top-full left-0 right-0 bg-background border-b border-border/30 md:hidden z-50 shadow-lg"
         >
-          <nav className="flex flex-col items-center p-4 gap-3">
-            <button className="text-muted-foreground hover:text-foreground transition-colors font-mono text-sm py-2">
-              Live
-            </button>
-            <button className="text-muted-foreground hover:text-foreground transition-colors font-mono text-sm py-2">
-              Model
-            </button>
-            <button className="text-muted-foreground hover:text-foreground transition-colors font-mono text-sm py-2">
-              Info
-            </button>
+          <nav className="flex flex-col items-center p-4 gap-4">
+            {navLinks.map((link) => (
+              <Link
+                key={link.name}
+                href={link.href}
+                onClick={() => setMenuOpen(false)}
+                className={cn(
+                  "text-sm font-mono transition-colors duration-200 w-full text-center py-2",
+                  pathname === link.href
+                    ? "text-foreground font-bold bg-secondary/50 rounded"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {link.name}
+              </Link>
+            ))}
           </nav>
         </div>
       )}

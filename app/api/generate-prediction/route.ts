@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase-admin"
 import { MODEL_CONFIG, type PredictionItem } from "@/lib/database.types"
 import { getTrendingCategories, type TrendingCategory } from "@/lib/trends"
 import { getPredictionDate } from "@/lib/time-utils"
+import { revalidateTag } from "next/cache"
 // Provider-specific imports for web search tools
 import { anthropic } from "@ai-sdk/anthropic"
 import { openai } from "@ai-sdk/openai"
@@ -233,6 +234,16 @@ export async function GET(req: Request) {
   
   const successCount = verification.verified.length + verification.retried.length
   const allSucceeded = successCount === 4
+
+  // Invalidate metrics cache so the Models Page shows updated data immediately
+  if (successCount > 0) {
+    try {
+      revalidateTag('model-metrics')
+      console.log('Invalidated model-metrics cache')
+    } catch (err) {
+      console.error('Failed to invalidate metrics cache:', err)
+    }
+  }
 
   return Response.json({
     date: predictionDate,
