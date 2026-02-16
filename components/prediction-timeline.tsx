@@ -989,9 +989,7 @@ function MobileTimeline({
       {/* Scroll container with reduced width for side taps */}
       <div
         ref={scrollContainerRef}
-        className={`h-[70vh] w-[85vw] max-w-md overflow-y-auto overflow-x-hidden px-3 py-4 transition-all duration-150 overscroll-contain ${
-          isScrolling ? "ring-1 ring-foreground/20 ring-inset" : ""
-        }`}
+        className="h-[70vh] w-[85vw] max-w-md overflow-y-auto overflow-x-hidden px-3 py-4 transition-all duration-150 overscroll-contain"
         style={{
           scrollbarWidth: "none",
           msOverflowStyle: "none",
