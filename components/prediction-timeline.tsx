@@ -841,7 +841,16 @@ function MobileTimeline({
   const isScrollingToDateRef = useRef(false);
 
   // Scroll to selected date when it changes (from calendar click)
+  // We use a ref to track if it's the initial mount to prevent auto-scrolling on load
+  const isInitialMount = useRef(true);
+
   useEffect(() => {
+    // Skip initial mount scroll to keep header visible
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
     if (!scrollContainerRef.current || availableDates.length === 0) return;
 
     // Skip if we are currently scrolling manually (to avoid fighting)
@@ -1056,12 +1065,12 @@ function MobileTimeline({
       </button>
 
       {/* Model navigation dots */}
-      <div className="flex justify-center gap-2 py-3">
+      <div className="flex justify-center gap-2 py-3 absolute bottom-4 left-0 right-0 z-20 pointer-events-none">
         {modelDisplayConfigs.map((_, index) => (
           <button
             key={index}
             onClick={() => setCurrentModelIndex(index)}
-            className={`w-2 h-2 rounded-full transition-all ${
+            className={`w-2 h-2 rounded-full transition-all pointer-events-auto ${
               index === currentModelIndex
                 ? "bg-foreground scale-125"
                 : "bg-muted-foreground/30"
