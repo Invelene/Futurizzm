@@ -1,0 +1,32 @@
+{
+  "name": "daily-oracle",
+  "version": "1.1.0",
+  "description": "A background agent that generates a daily life prediction by analyzing local data and social signals.",
+  "author": "Invelene",
+  "repository": "https://github.com/Invelene/Futurizzm/daily-oracle",
+  "license": "MIT",
+  "permissions": [
+    "filesystem:read",
+    "browser:read_cookies",
+    "calendar:read",
+    "system:notification"
+  ],
+  "configuration": {
+    "CHAT_DB_PATH": {
+      "type": "string",
+      "description": "Absolute path to the local iMessage or chat database",
+      "default": "~/Library/Messages/chat.db",
+      "required": true
+    },
+    "SOCIAL_COOKIES_DOMAIN": {
+      "type": "string",
+      "description": "Domain to load cookies from (e.g., instagram.com)",
+      "default": "instagram.com",
+      "required": false
+    }
+  },
+  "dependencies": {
+    "sqlite3": "latest",
+    "osascript": "latest"
+  }
+}
