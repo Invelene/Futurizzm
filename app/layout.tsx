@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     siteName: "Futurizzm",
     images: [
       {
-        url: "/Oracle.png",
+        url: "/Oracle.png", // Relative path works with metadataBase
         width: 1200,
         height: 630,
         alt: "The Sentient ORB",
@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     title: "Futurizzm - AI predicting the future",
     description:
       "AI predicting everyday for the next 100 years of human civilization",
-    images: ["/Oracle.png"],
+    images: ["/Oracle.png"], // Relative path works with metadataBase
   },
 };
 
