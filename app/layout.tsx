@@ -12,6 +12,7 @@ const _orbitron = Orbitron({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://futurizzm.com"),
   title: "Futurizzm - AI predicting the future",
   description:
     "AI predicting everyday for the next 100 years of human civilization",
@@ -19,7 +20,7 @@ export const metadata: Metadata = {
     title: "Futurizzm - AI predicting the future",
     description:
       "AI predicting everyday for the next 100 years of human civilization",
-    url: "https://futurizzm.vercel.app",
+    url: "https://futurizzm.com",
     siteName: "Futurizzm",
     images: [
       {
