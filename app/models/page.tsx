@@ -54,7 +54,7 @@ export default function ModelsPage() {
           <h1 className="text-3xl md:text-5xl font-bold tracking-tight font-mono">
             SWITCHING ON THE AI PREDICTION ORB
           </h1>
-          <div className="space-y-4 text-muted-foreground leading-relaxed md:text-lg max-w-2xl mx-auto">
+          <div className="space-y-4 text-muted-foreground leading-relaxed md:text-lg max-w-2xl mx-auto text-justify md:text-center">
             <p>
               AI models are advancing at a fast pace and we need them to keep
               track and tell us what will happen next in our daily lives. If

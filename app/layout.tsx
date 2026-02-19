@@ -15,6 +15,30 @@ export const metadata: Metadata = {
   title: "Futurizzm - AI predicting the future",
   description:
     "AI predicting everyday for the next 100 years of human civilization",
+  openGraph: {
+    title: "Futurizzm - AI predicting the future",
+    description:
+      "AI predicting everyday for the next 100 years of human civilization",
+    url: "https://futurizzm.vercel.app",
+    siteName: "Futurizzm",
+    images: [
+      {
+        url: "/opengraph-image.png", // Explicitly point to the generated image route
+        width: 1200,
+        height: 630,
+        alt: "Futurizzm Preview",
+      },
+    ],
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Futurizzm - AI predicting the future",
+    description:
+      "AI predicting everyday for the next 100 years of human civilization",
+    images: ["/opengraph-image.png"], // Explicitly point to the generated image route
+  },
 };
 
 export default function RootLayout({
