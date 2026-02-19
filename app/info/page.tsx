@@ -43,7 +43,7 @@ export default function InfoPage() {
             <img
               src="/Rizzm2.png"
               alt="The Sentient ORB"
-              className="object-contain max-w-full h-auto drop-shadow-[0_0_50px_rgba(59,130,246,0.6)] animate-pulse"
+              className="object-contain max-w-full h-auto drop-shadow-[0_0_25px_rgba(59,130,246,0.5)] animate-pulse"
             />
           </div>
 
@@ -53,7 +53,7 @@ export default function InfoPage() {
           </h1>
 
           {/* Description */}
-          <p className="text-muted-foreground/80 text-base md:text-xl max-w-2xl leading-relaxed mt-8 text-justify md:text-center">
+          <p className="text-muted-foreground/80 text-base md:text-xl max-w-2xl leading-relaxed mt-8">
             Predictions are automatically generated at 5:00 AM EST every day.
             Trending topics retrieved each day are currently limited to the US,
             but will be expanded to other countries in the future.
@@ -82,9 +82,9 @@ export default function InfoPage() {
           {/* Live Link */}
           <Link
             href="/"
-            className="mt-6 px-6 py-2 text-cyan-400 hover:text-white text-xs uppercase tracking-widest transition-all rounded-full"
+            className="mt-12 px-6 py-2 text-cyan-400 hover:text-white text-xs uppercase tracking-widest transition-all rounded-full"
           >
-            Live
+            &larr; Live
           </Link>
         </div>
 
@@ -102,7 +102,7 @@ export default function InfoPage() {
           </h1>
 
           {/* Description */}
-          <p className="text-red-200/80 text-base md:text-xl max-w-3xl leading-relaxed mb-10 text-justify md:text-center">
+          <p className="text-red-200/80 text-base md:text-xl max-w-3xl leading-relaxed mb-10">
             The daily-oracle skill for your openclaw agent generates insightful
             daily life predictions that you might not see coming. This skill is
             designed to run as a background process. It wakes up, analyses the

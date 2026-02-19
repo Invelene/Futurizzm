@@ -23,10 +23,10 @@ export const metadata: Metadata = {
     siteName: "Futurizzm",
     images: [
       {
-        url: "/opengraph-image.png", // Explicitly point to the generated image route
+        url: "/Oracle.png",
         width: 1200,
         height: 630,
-        alt: "Futurizzm Preview",
+        alt: "The Sentient ORB",
       },
     ],
     locale: "en_US",
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     title: "Futurizzm - AI predicting the future",
     description:
       "AI predicting everyday for the next 100 years of human civilization",
-    images: ["/opengraph-image.png"], // Explicitly point to the generated image route
+    images: ["/Oracle.png"],
   },
 };
 
