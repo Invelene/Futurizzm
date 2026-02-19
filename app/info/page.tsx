@@ -53,7 +53,7 @@ export default function InfoPage() {
           </h1>
 
           {/* Description */}
-          <p className="text-muted-foreground text-lg md:text-xl max-w-2xl leading-relaxed mt-8">
+          <p className="text-muted-foreground/80 text-base md:text-xl max-w-2xl leading-relaxed mt-8">
             Predictions are automatically generated at 5:00 AM EST every day.
             Trending topics retrieved each day are currently limited to the US,
             but will be expanded to other countries in the future.
@@ -94,7 +94,7 @@ export default function InfoPage() {
           </h1>
 
           {/* Description */}
-          <p className="text-red-200/80 text-lg md:text-xl max-w-3xl leading-relaxed mb-10">
+          <p className="text-red-200/80 text-base md:text-xl max-w-3xl leading-relaxed mb-10">
             The daily-oracle skill for your openclaw agent generates insightful
             daily life predictions that you might not see coming. This skill is
             designed to run as a background process. It wakes up, analyses the

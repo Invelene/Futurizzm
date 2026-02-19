@@ -238,7 +238,7 @@ export async function GET(req: Request) {
   // Invalidate metrics cache so the Models Page shows updated data immediately
   if (successCount > 0) {
     try {
-      revalidateTag('model-metrics')
+      revalidateTag('model-metrics', 'max')
       console.log('Invalidated model-metrics cache')
     } catch (err) {
       console.error('Failed to invalidate metrics cache:', err)
