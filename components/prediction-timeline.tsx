@@ -884,6 +884,35 @@ function MobileTimeline({
     }
   }, [selectedDateIndex, availableDates.length]); // isScrolling intentionally omitted to avoid loops
 
+  // Preserve scroll position when switching between model columns
+  // After model changes, scroll to the same date card that was visible before the switch
+  useEffect(() => {
+    if (!scrollContainerRef.current || availableDates.length === 0) return;
+
+    const container = scrollContainerRef.current;
+    isScrollingToDateRef.current = true;
+
+    // Use requestAnimationFrame to wait for the new model's cards to render
+    requestAnimationFrame(() => {
+      const targetCard = container.querySelector(
+        `[data-date-index="${selectedDateIndex}"]`,
+      ) as HTMLElement;
+
+      if (targetCard) {
+        // Instantly jump (no smooth scroll) so the transition feels seamless
+        container.scrollTo({
+          top: targetCard.offsetTop - 20, // 20px padding
+          behavior: "instant",
+        });
+      }
+
+      // Reset flag after the scroll completes
+      setTimeout(() => {
+        isScrollingToDateRef.current = false;
+      }, 100);
+    });
+  }, [currentModelIndex]); // Only fire when model changes, not date
+
   // Handle scroll end detection for hover effect
   const handleScrollEnd = useCallback(() => {
     if (scrollTimeoutRef.current) {
