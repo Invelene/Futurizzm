@@ -26,7 +26,7 @@ export default function InfoPage() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-background text-foreground font-sans overflow-x-hidden">
+    <div className="min-h-screen flex flex-col bg-background text-foreground font-sans">
       <Header />
 
       <main className="flex-1 container mx-auto px-4 md:px-8 py-12 flex flex-col items-center justify-center text-center relative min-h-[700px]">

@@ -8,7 +8,7 @@ export function Footer() {
           FUTURIZZM © 2026
         </p>
         <p className="text-[10px] md:text-xs text-muted-foreground/60 font-mono">
-          AI CAN MAKE MISTAKES. PREDICTIONS ARE FOR ENTERTAINMENT PURPOSES ONLY.
+          AI CAN MAKE MISTAKES. FACTCHECK ALL PREDICTIONS.
         </p>
       </div>
     </footer>

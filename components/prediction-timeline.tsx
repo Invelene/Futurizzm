@@ -708,65 +708,83 @@ export const PredictionTimeline = forwardRef<
                   style={{ scrollSnapType: "y proximity" }}
                 >
                   <div className="flex flex-col">
-                    {availableDates.map((dateStr, dayIndex) => {
-                      const pred = getPredictionDataForDate(
-                        config.modelKey,
-                        dateStr,
-                      );
-                      const isLoading = loading[dateStr];
-
-                      return (
-                        <div
-                          key={`${dateStr}-${config.model}`}
-                          data-date={dateStr}
-                          style={{ scrollSnapAlign: "start" }}
-                        >
-                          <div
-                            className="flex justify-center"
-                            ref={(el) => {
-                              if (el) {
-                                // Measure and register height after render
-                                requestAnimationFrame(() => {
-                                  registerCardHeight(
-                                    dateStr,
-                                    config.modelKey,
-                                    el.offsetHeight,
-                                  );
-                                });
-                                // Register for visibility observation (calendar highlight)
-                                registerCardForVisibility(el, dateStr);
-                              }
-                            }}
-                          >
-                            <PredictionCard
-                              category={
-                                pred?.category || "Awaiting Predictions"
-                              }
-                              categoryColor={getCategoryColor(
-                                pred?.category || "",
-                                modelIndex,
-                              )}
-                              model={config.model}
-                              modelVersion={config.modelVersion}
-                              predictions={pred?.predictions || []}
-                              date={formatDateDisplay(dateStr)}
-                              isSelected={selectedModel === modelIndex}
-                              isLoading={isLoading}
-                            />
-                          </div>
-                          {dayIndex < availableDates.length - 1 && (
-                            <ConnectingLine
-                              hidden={isAligned}
-                              currentCardHeight={getCardHeight(
-                                dateStr,
-                                config.modelKey,
-                              )}
-                              maxRowHeight={getMaxHeightForRow(dateStr)}
-                            />
-                          )}
+                    {availableDates.length === 0 ? (
+                      /* Show skeleton card immediately while dates are loading */
+                      <div style={{ scrollSnapAlign: "start" }}>
+                        <div className="flex justify-center">
+                          <PredictionCard
+                            category="Awaiting Predictions"
+                            categoryColor={getCategoryColor("", modelIndex)}
+                            model={config.model}
+                            modelVersion={config.modelVersion}
+                            predictions={[]}
+                            date="--"
+                            isSelected={false}
+                            isLoading={true}
+                          />
                         </div>
-                      );
-                    })}
+                      </div>
+                    ) : (
+                      availableDates.map((dateStr, dayIndex) => {
+                        const pred = getPredictionDataForDate(
+                          config.modelKey,
+                          dateStr,
+                        );
+                        const isLoading = loading[dateStr];
+
+                        return (
+                          <div
+                            key={`${dateStr}-${config.model}`}
+                            data-date={dateStr}
+                            style={{ scrollSnapAlign: "start" }}
+                          >
+                            <div
+                              className="flex justify-center"
+                              ref={(el) => {
+                                if (el) {
+                                  // Measure and register height after render
+                                  requestAnimationFrame(() => {
+                                    registerCardHeight(
+                                      dateStr,
+                                      config.modelKey,
+                                      el.offsetHeight,
+                                    );
+                                  });
+                                  // Register for visibility observation (calendar highlight)
+                                  registerCardForVisibility(el, dateStr);
+                                }
+                              }}
+                            >
+                              <PredictionCard
+                                category={
+                                  pred?.category || "Awaiting Predictions"
+                                }
+                                categoryColor={getCategoryColor(
+                                  pred?.category || "",
+                                  modelIndex,
+                                )}
+                                model={config.model}
+                                modelVersion={config.modelVersion}
+                                predictions={pred?.predictions || []}
+                                date={formatDateDisplay(dateStr)}
+                                isSelected={selectedModel === modelIndex}
+                                isLoading={isLoading}
+                              />
+                            </div>
+                            {dayIndex < availableDates.length - 1 && (
+                              <ConnectingLine
+                                hidden={isAligned}
+                                currentCardHeight={getCardHeight(
+                                  dateStr,
+                                  config.modelKey,
+                                )}
+                                maxRowHeight={getMaxHeightForRow(dateStr)}
+                              />
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
                 </div>
               </div>
@@ -1038,31 +1056,46 @@ function MobileTimeline({
 
         {/* Vertical feed of prediction cards */}
         <div className="flex flex-col gap-4">
-          {availableDates.map((dateStr, dateIndex) => {
-            const pred = getPredictionDataForDate(config.modelKey, dateStr);
-            const isLoading = loading[dateStr];
+          {availableDates.length === 0 ? (
+            /* Show skeleton card immediately while dates are loading */
+            <div className="flex justify-center">
+              <PredictionCard
+                category="Awaiting Predictions"
+                categoryColor={getCategoryColor("", currentModelIndex)}
+                model={config.model}
+                modelVersion={config.modelVersion}
+                predictions={[]}
+                date="--"
+                isLoading={true}
+              />
+            </div>
+          ) : (
+            availableDates.map((dateStr, dateIndex) => {
+              const pred = getPredictionDataForDate(config.modelKey, dateStr);
+              const isLoading = loading[dateStr];
 
-            return (
-              <div
-                key={`${dateStr}-${config.modelKey}`}
-                data-date-index={dateIndex}
-                className="flex justify-center"
-              >
-                <PredictionCard
-                  category={pred?.category || "Loading..."}
-                  categoryColor={getCategoryColor(
-                    pred?.category || "",
-                    currentModelIndex,
-                  )}
-                  model={config.model}
-                  modelVersion={config.modelVersion}
-                  predictions={pred?.predictions || []}
-                  date={formatDateDisplay(dateStr)}
-                  isLoading={isLoading || !pred}
-                />
-              </div>
-            );
-          })}
+              return (
+                <div
+                  key={`${dateStr}-${config.modelKey}`}
+                  data-date-index={dateIndex}
+                  className="flex justify-center"
+                >
+                  <PredictionCard
+                    category={pred?.category || "Loading..."}
+                    categoryColor={getCategoryColor(
+                      pred?.category || "",
+                      currentModelIndex,
+                    )}
+                    model={config.model}
+                    modelVersion={config.modelVersion}
+                    predictions={pred?.predictions || []}
+                    date={formatDateDisplay(dateStr)}
+                    isLoading={isLoading || !pred}
+                  />
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
 
