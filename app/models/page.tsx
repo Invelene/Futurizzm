@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import Link from "next/link";
-import Image from "next/image";
 
 interface ModelMetric {
   model: string;
@@ -107,7 +106,7 @@ export default function ModelsPage() {
                 {/* Logo */}
                 <div className="w-20 h-20 md:w-24 md:h-24 p-4 flex items-center justify-center">
                   <div className="relative w-full h-full">
-                    <Image
+                    <img
                       src={
                         modelName === "GROK"
                           ? "/Grok.svg"
@@ -118,9 +117,7 @@ export default function ModelsPage() {
                               : "/Gemini.svg"
                       }
                       alt={modelName}
-                      fill
-                      sizes="(max-width: 768px) 80px, 96px"
-                      className="object-contain"
+                      className="object-contain w-full h-full"
                     />
                   </div>
                 </div>

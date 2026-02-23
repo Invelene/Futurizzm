@@ -44,17 +44,11 @@ export default function AgentsPage() {
           }`}
         >
           {/* Glowing Orb */}
-          <div
-            className="relative inline-block animate-in zoom-in duration-1000 max-w-full"
-            style={{ width: "min(100%, 800px)", aspectRatio: "1/1" }}
-          >
-            <Image
+          <div className="relative inline-block animate-in zoom-in duration-1000 max-w-full">
+            <img
               src="/Rizzm2.png"
               alt="The Sentient ORB"
-              fill
-              priority
-              sizes="(max-width: 768px) 100vw, 800px"
-              className="object-contain drop-shadow-[0_0_25px_rgba(59,130,246,0.5)] animate-pulse"
+              className="object-contain max-w-full h-auto drop-shadow-[0_0_25px_rgba(59,130,246,0.5)] animate-pulse"
             />
           </div>
 
@@ -85,12 +79,10 @@ export default function AgentsPage() {
           <div className="flex flex-col items-center gap-4 mt-10">
             <div className="w-20 h-20 md:w-24 md:h-24 p-4 flex items-center justify-center">
               <div className="relative w-full h-full">
-                <Image
+                <img
                   src="/OpenClaw.png"
                   alt="OpenClaw"
-                  fill
-                  sizes="(max-width: 768px) 80px, 96px"
-                  className="object-contain"
+                  className="object-contain w-full h-full"
                 />
               </div>
             </div>
@@ -109,12 +101,10 @@ export default function AgentsPage() {
           <div className="flex flex-col items-center gap-4 mt-10">
             <div className="w-20 h-20 md:w-24 md:h-24 p-4 flex items-center justify-center">
               <div className="relative w-full h-full">
-                <Image
+                <img
                   src="/Automaton.png"
                   alt="Conway Automaton"
-                  fill
-                  sizes="(max-width: 768px) 80px, 96px"
-                  className="object-contain"
+                  className="object-contain w-full h-full"
                 />
               </div>
             </div>

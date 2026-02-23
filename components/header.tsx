@@ -90,7 +90,6 @@ export function Header() {
           <div key={link.name} className="flex items-center">
             <Link
               href={link.href}
-              prefetch={true}
               className={cn(
                 "text-sm font-mono transition-colors duration-200",
                 pathname === link.href
@@ -142,7 +141,6 @@ export function Header() {
               <Link
                 key={link.name}
                 href={link.href}
-                prefetch={true}
                 onClick={() => setMenuOpen(false)}
                 className={cn(
                   "text-sm font-mono transition-colors duration-200 w-full text-center py-2",
