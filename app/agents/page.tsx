@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import Image from "next/image";
@@ -8,6 +8,11 @@ import Link from "next/link";
 
 export default function AgentsPage() {
   const [showOracle, setShowOracle] = useState(false);
+
+  // Scroll to top when view changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [showOracle]);
 
   // Testimonials for the carousel
   const testimonials = [
@@ -82,7 +87,10 @@ export default function AgentsPage() {
               </div>
             </div>
             <button
-              onClick={() => setShowOracle(true)}
+              onClick={(e) => {
+                setShowOracle(true);
+                e.currentTarget.blur();
+              }}
               className="px-6 py-2 border border-red-500/50 text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all rounded-full text-sm tracking-widest font-mono animate-pulse"
             >
               EXPERIMENTAL: OPENCLAW SKILL &rarr;
@@ -141,11 +149,11 @@ export default function AgentsPage() {
             notification, and then terminates.
           </p>
 
-          {/* CTA Button (Moved here) */}
+          {/* CTA Button */}
           <Link
             href="https://clawhub.ai/Invelene/daily-oracle"
             target="_blank"
-            className="mb-12 px-10 py-3 bg-red-600/10 text-red-500 border border-red-500/50 rounded-full font-bold tracking-widest hover:bg-red-600 hover:text-white transition-all shadow-[0_0_15px_rgba(220,38,38,0.3)] hover:shadow-[0_0_30px_rgba(220,38,38,0.6)]"
+            className="mb-12 px-10 py-3 bg-red-600/10 text-red-500 border border-red-500/50 rounded-full font-bold tracking-widest hover:bg-red-600 hover:text-white transition-all shadow-[0_0_15px_rgba(220,38,38,0.3)] hover:shadow-[0_0_30px_rgba(220,38,38,0.6)] active:bg-red-600 active:text-white"
           >
             VIEW SKILL
           </Link>
@@ -174,7 +182,10 @@ export default function AgentsPage() {
 
           {/* Back Trigger */}
           <button
-            onClick={() => setShowOracle(false)}
+            onClick={(e) => {
+              setShowOracle(false);
+              e.currentTarget.blur();
+            }}
             className="mt-8 px-6 py-2 text-cyan-400 hover:text-white text-xs uppercase tracking-widest transition-all rounded-full"
           >
             &larr; Return to Sentient ORB
