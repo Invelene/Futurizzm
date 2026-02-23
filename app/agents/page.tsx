@@ -129,19 +129,18 @@ export default function AgentsPage() {
 
         {/* VIEW 2: DAILY ORACLE (Starts Hidden) */}
         <div
-          className={`flex flex-col items-center justify-start pt-32 transition-all duration-700 ease-in-out w-full ${
+          className={`flex flex-col items-center justify-start pt-16 md:pt-24 transition-all duration-700 ease-in-out w-full ${
             showOracle
               ? "relative translate-x-0 opacity-100"
               : "absolute inset-0 translate-x-full opacity-0 pointer-events-none"
           }`}
         >
-          {/* Title - No Glow, No Experimental, 6XL, aligned top (via container justify-start pt-32) */}
-          <h1 className="text-4xl md:text-6xl font-bold tracking-tight font-mono relative z-10 text-white mb-6">
+          {/* Title - No Glow, No Experimental, 6XL, aligned top (via container justify-start pt-16 md:pt-24) */}
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight font-mono relative z-10 text-white mb-4 md:mb-6">
             Meet the ORB of OpenClaw
           </h1>
 
-          {/* Description */}
-          <p className="text-red-200/80 text-base md:text-xl max-w-3xl leading-relaxed mb-10">
+          <p className="text-red-200/80 text-base md:text-xl max-w-3xl leading-relaxed mb-6 md:mb-10">
             The daily-oracle skill for your openclaw agent generates insightful
             daily life predictions that you might not see coming. This skill is
             designed to run as a background process. It wakes up, analyses the
@@ -149,11 +148,10 @@ export default function AgentsPage() {
             notification, and then terminates.
           </p>
 
-          {/* CTA Button */}
           <Link
             href="https://clawhub.ai/Invelene/daily-oracle"
             target="_blank"
-            className="mb-12 px-10 py-3 bg-red-600/10 text-red-500 border border-red-500/50 rounded-full font-bold tracking-widest hover:bg-red-600 hover:text-white transition-all shadow-[0_0_15px_rgba(220,38,38,0.3)] hover:shadow-[0_0_30px_rgba(220,38,38,0.6)] active:bg-red-600 active:text-white"
+            className="mb-8 md:mb-12 px-10 py-3 bg-red-600/10 text-red-500 border border-red-500/50 rounded-full font-bold tracking-widest hover:bg-red-600 hover:text-white transition-all shadow-[0_0_15px_rgba(220,38,38,0.3)] hover:shadow-[0_0_30px_rgba(220,38,38,0.6)] active:bg-red-600 active:text-white"
           >
             VIEW SKILL
           </Link>
