@@ -104,7 +104,7 @@ export default function ModelsPage() {
                 className="bg-card/30 backdrop-blur-md border border-border/50 rounded-xl p-6 flex flex-col items-center text-center gap-6 hover:border-border/80 transition-all duration-300 hover:shadow-[0_0_30px_rgba(255,255,255,0.05)]"
               >
                 {/* Logo */}
-                <div className="w-20 h-20 md:w-24 md:h-24 p-4 flex items-center justify-center">
+                <div className="w-40 h-40 md:w-48 md:h-48 p-4 flex items-center justify-center">
                   <div className="relative w-full h-full">
                     <img
                       src={
