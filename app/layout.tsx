@@ -50,7 +50,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className="font-sans antialiased min-h-screen bg-background"
+        className="font-sans antialiased min-h-screen bg-background overflow-x-clip"
         suppressHydrationWarning
       >
         <ThemeProvider
