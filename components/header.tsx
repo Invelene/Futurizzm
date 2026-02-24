@@ -71,9 +71,8 @@ export function Header() {
     { name: "Agents", href: "/agents" },
   ];
 
-  // Mobile menu: close menu first, then navigate programmatically
+  // Mobile menu: navigate programmatically, menu closes via pathname useEffect
   const handleMobileNav = (href: string) => {
-    setMenuOpen(false);
     router.push(href);
   };
 
