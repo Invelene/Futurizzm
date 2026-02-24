@@ -55,6 +55,11 @@ export function Header() {
     };
   }, [menuOpen]);
 
+  // Close menu when route changes (prevents unmounting Link mid-navigation)
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
   const formatTime = (num: number) => num.toString().padStart(2, "0");
 
   const navLinks = [
@@ -141,7 +146,6 @@ export function Header() {
                 key={link.name}
                 href={link.href}
                 prefetch={true}
-                onClick={() => setMenuOpen(false)}
                 className={cn(
                   "text-sm font-mono transition-colors duration-200 w-full text-center py-2",
                   pathname === link.href
