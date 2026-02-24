@@ -3,7 +3,7 @@
 import { Menu } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { getTimeUntilReset } from "@/lib/time-utils";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,7 @@ export function Header() {
   });
 
   const pathname = usePathname();
+  const router = useRouter();
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -50,12 +51,14 @@ export function Header() {
     }
 
     document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("touchstart", handleOutsideClick);
     return () => {
       document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("touchstart", handleOutsideClick);
     };
   }, [menuOpen]);
 
-  // Close menu when route changes (prevents unmounting Link mid-navigation)
+  // Close menu when route changes
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
@@ -67,6 +70,12 @@ export function Header() {
     { name: "Models", href: "/models" },
     { name: "Agents", href: "/agents" },
   ];
+
+  // Mobile menu: close menu first, then navigate programmatically
+  const handleMobileNav = (href: string) => {
+    setMenuOpen(false);
+    router.push(href);
+  };
 
   return (
     <header className="relative w-full px-4 md:px-6 py-4 flex items-center justify-between border-b border-border/30 bg-background/80 backdrop-blur-sm z-50 sticky top-0">
@@ -142,10 +151,9 @@ export function Header() {
         >
           <nav className="flex flex-col items-center p-4 gap-4">
             {navLinks.map((link) => (
-              <Link
+              <button
                 key={link.name}
-                href={link.href}
-                prefetch={true}
+                onClick={() => handleMobileNav(link.href)}
                 className={cn(
                   "text-sm font-mono transition-colors duration-200 w-full text-center py-2",
                   pathname === link.href
@@ -154,7 +162,7 @@ export function Header() {
                 )}
               >
                 {link.name}
-              </Link>
+              </button>
             ))}
           </nav>
         </div>
