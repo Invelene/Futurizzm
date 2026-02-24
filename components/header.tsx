@@ -3,7 +3,7 @@
 import { Menu } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { getTimeUntilReset } from "@/lib/time-utils";
 import { cn } from "@/lib/utils";
@@ -18,7 +18,6 @@ export function Header() {
   });
 
   const pathname = usePathname();
-  const router = useRouter();
   const menuRef = useRef<HTMLDivElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -34,11 +33,11 @@ export function Header() {
     return () => clearInterval(timer);
   }, []);
 
-  // Close menu on outside click/touch
+  // Close menu on outside click
   useEffect(() => {
     if (!menuOpen) return;
 
-    function handleOutsideClick(event: MouseEvent | TouchEvent) {
+    function handleOutsideClick(event: MouseEvent) {
       const target = event.target as Node;
       if (
         menuRef.current &&
@@ -50,11 +49,9 @@ export function Header() {
       }
     }
 
-    document.addEventListener("mousedown", handleOutsideClick);
-    document.addEventListener("touchstart", handleOutsideClick);
+    document.addEventListener("click", handleOutsideClick);
     return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
-      document.removeEventListener("touchstart", handleOutsideClick);
+      document.removeEventListener("click", handleOutsideClick);
     };
   }, [menuOpen]);
 
@@ -70,11 +67,6 @@ export function Header() {
     { name: "Models", href: "/models" },
     { name: "Agents", href: "/agents" },
   ];
-
-  // Mobile menu: navigate programmatically, menu closes via pathname useEffect
-  const handleMobileNav = (href: string) => {
-    router.push(href);
-  };
 
   return (
     <header className="relative w-full px-4 md:px-6 py-4 flex items-center justify-between border-b border-border/30 bg-background/80 backdrop-blur-sm z-50 sticky top-0">
@@ -150,9 +142,9 @@ export function Header() {
         >
           <nav className="flex flex-col items-center p-4 gap-4">
             {navLinks.map((link) => (
-              <button
+              <a
                 key={link.name}
-                onClick={() => handleMobileNav(link.href)}
+                href={link.href}
                 className={cn(
                   "text-sm font-mono transition-colors duration-200 w-full text-center py-2",
                   pathname === link.href
@@ -161,7 +153,7 @@ export function Header() {
                 )}
               >
                 {link.name}
-              </button>
+              </a>
             ))}
           </nav>
         </div>
