@@ -50,10 +50,8 @@ export function Header() {
     }
 
     document.addEventListener("mousedown", handleOutsideClick);
-    document.addEventListener("touchstart", handleOutsideClick);
     return () => {
       document.removeEventListener("mousedown", handleOutsideClick);
-      document.removeEventListener("touchstart", handleOutsideClick);
     };
   }, [menuOpen]);
 
